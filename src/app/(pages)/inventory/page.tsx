@@ -150,18 +150,33 @@ export default function InventoryPage() {
   function onRecordLossSubmit(values: z.infer<typeof recordLossSchema>) {
     if (!user) return;
     const flock = flocks?.find(f => f.id === values.flockId);
-    if (!flock) return;
+    if (!flock) {
+        toast({
+            variant: "destructive",
+            title: "Flock not found",
+            description: "Could not find the selected flock to record the loss."
+        });
+        return;
+    }
+    if (values.count > flock.count) {
+        toast({
+            variant: "destructive",
+            title: "Invalid Loss Count",
+            description: `Cannot record a loss of ${values.count} birds as the flock only has ${flock.count} remaining.`
+        });
+        return;
+    }
 
     const newCount = flock.count - values.count;
     const flockDocRef = doc(firestore, 'users', user.uid, 'flocks', values.flockId);
     
     updateDocumentNonBlocking(flockDocRef, {
-        count: newCount < 0 ? 0 : newCount
+        count: newCount
     });
 
     toast({
         title: "Loss Recorded",
-        description: `Recorded a loss of ${values.count} in flock ${flock?.id.substring(0,6)}.`,
+        description: `Recorded a loss of ${values.count} in flock ${flock?.id.substring(0,6)}. New count: ${newCount}`,
     })
     recordLossForm.reset();
     setRecordLossOpen(false);
@@ -202,7 +217,7 @@ export default function InventoryPage() {
   };
 
   const calculateFCR = (flock: Flock) => {
-    if (!flock.count || !flock.averageWeight || !flock.totalFeedConsumed) return 'N/A';
+    if (!flock.count || !flock.averageWeight || !flock.totalFeedConsumed || flock.totalFeedConsumed <= 0) return 'N/A';
     const totalWeight = flock.count * flock.averageWeight;
     if (totalWeight === 0) return 'N/A';
     const fcr = flock.totalFeedConsumed / totalWeight;
@@ -210,7 +225,7 @@ export default function InventoryPage() {
   }
 
   const calculateCostPerBird = (flock: Flock) => {
-    if(!flock.count || !flock.totalCost) return 'N/A';
+    if(!flock.count || !flock.totalCost || flock.count <= 0) return 'N/A';
     const cost = flock.totalCost / flock.count;
     return `$${cost.toFixed(2)}`;
   }

@@ -30,16 +30,16 @@ export const flockSchema = z.object({
   count: z.coerce.number().min(0, 'Quantity must be zero or more'),
   hatchDate: z.date(),
   initialCount: z.coerce.number().min(1, 'Initial count must be at least 1'),
-  averageWeight: z.coerce.number().min(0, 'Average weight must be positive'),
-  totalFeedConsumed: z.coerce.number().min(0, 'Feed consumed must be positive'),
-  totalCost: z.coerce.number().min(0, 'Total cost must be positive'),
+  averageWeight: z.coerce.number().positive('Average weight must be positive'),
+  totalFeedConsumed: z.coerce.number().min(0, 'Feed consumed must be a positive number'),
+  totalCost: z.coerce.number().min(0, 'Total cost must be a positive number'),
 });
 
 
 export const saleSchema = z.object({
   flockId: z.string().min(1, 'Please select a flock'),
-  quantity: z.coerce.number().min(1, 'Quantity must be at least 1'),
-  pricePerUnit: z.coerce.number().min(0.01, 'Price must be positive'),
+  quantity: z.coerce.number().positive('Quantity must be greater than zero'),
+  pricePerUnit: z.coerce.number().positive('Price must be greater than zero'),
   customer: z.string().min(2, 'Customer name is required'),
   saleDate: z.date(),
 });
@@ -52,8 +52,8 @@ export interface Sale extends z.infer<typeof saleSchema> {
 
 export const expenditureSchema = z.object({
   category: z.string().min(1, 'Please select a category'),
-  quantity: z.coerce.number().min(0, 'Quantity must be a positive number.'),
-  unitPrice: z.coerce.number().min(0, 'Unit price must be a positive number.'),
+  quantity: z.coerce.number().positive('Quantity must be a positive number.'),
+  unitPrice: z.coerce.number().positive('Unit price must be a positive number.'),
   description: z.string().optional(),
   expenditureDate: z.date(),
 });

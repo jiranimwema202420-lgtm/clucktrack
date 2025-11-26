@@ -125,14 +125,30 @@ export default function SalesPage() {
 
     const quantityDifference = values.quantity - originalSaleQuantity;
     
-    if (quantityDifference > flockToUpdate.count) {
+    if (quantityDifference > flockToUpdate.count && values.flockId === selectedSale.flockId) {
         toast({ variant: "destructive", title: "Not enough birds", description: `Cannot update sale. You only have ${flockToUpdate.count} birds remaining in the flock.` });
         return;
     }
     
-    const newFlockCount = flockToUpdate.count - quantityDifference;
-    const flockDocRef = doc(firestore, 'users', user.uid, 'flocks', values.flockId);
-    updateDocumentNonBlocking(flockDocRef, { count: newFlockCount });
+    // If flock is changed, revert original flock count and deduct from new one
+    if(values.flockId !== selectedSale.flockId) {
+        const originalFlock = flocks.find(f => f.id === selectedSale.flockId);
+        if(originalFlock) {
+            const originalFlockDocRef = doc(firestore, 'users', user.uid, 'flocks', selectedSale.flockId);
+            updateDocumentNonBlocking(originalFlockDocRef, { count: originalFlock.count + originalSaleQuantity });
+        }
+        if(values.quantity > flockToUpdate.count) {
+            toast({ variant: "destructive", title: "Not enough birds", description: `The newly selected flock only has ${flockToUpdate.count} birds.` });
+            return;
+        }
+        const newFlockDocRef = doc(firestore, 'users', user.uid, 'flocks', values.flockId);
+        updateDocumentNonBlocking(newFlockDocRef, { count: flockToUpdate.count - values.quantity });
+
+    } else {
+        const newFlockCount = flockToUpdate.count - quantityDifference;
+        const flockDocRef = doc(firestore, 'users', user.uid, 'flocks', values.flockId);
+        updateDocumentNonBlocking(flockDocRef, { count: newFlockCount });
+    }
 
     const total = values.quantity * values.pricePerUnit;
     const updatedSale = {
