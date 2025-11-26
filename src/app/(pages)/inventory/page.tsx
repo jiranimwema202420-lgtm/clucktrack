@@ -143,6 +143,7 @@ export default function InventoryPage() {
   }
 
   const getAgeInWeeks = (hatchDate: Timestamp) => {
+    if (!hatchDate) return 0;
     return differenceInWeeks(new Date(), hatchDate.toDate());
   };
 
