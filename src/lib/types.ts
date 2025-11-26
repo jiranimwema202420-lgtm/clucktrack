@@ -25,6 +25,17 @@ export interface Flock {
   totalCost: number; // in $
 };
 
+export const flockSchema = z.object({
+  breed: z.string().min(1, 'Breed is required'),
+  count: z.coerce.number().min(0, 'Quantity must be zero or more'),
+  hatchDate: z.date(),
+  initialCount: z.coerce.number().min(1, 'Initial count must be at least 1'),
+  averageWeight: z.coerce.number().min(0, 'Average weight must be positive'),
+  totalFeedConsumed: z.coerce.number().min(0, 'Feed consumed must be positive'),
+  totalCost: z.coerce.number().min(0, 'Total cost must be positive'),
+});
+
+
 export const saleSchema = z.object({
   flockId: z.string().min(1, 'Please select a flock'),
   quantity: z.coerce.number().min(1, 'Quantity must be at least 1'),

@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import {
   Table,
   TableBody,
@@ -18,11 +17,10 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, MinusCircle, Calendar as CalendarIcon, Loader2, Trash2 } from 'lucide-react';
+import { PlusCircle, MinusCircle, Calendar as CalendarIcon, Loader2, Trash2, Pencil } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -66,15 +64,11 @@ import { cn } from '@/lib/utils';
 import { format, differenceInWeeks } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Flock } from '@/lib/types';
+import { flockSchema } from '@/lib/types';
 import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, Timestamp, doc } from 'firebase/firestore';
+import { z } from 'zod';
 
-
-const addFlockSchema = z.object({
-  breed: z.string().min(1, 'Breed is required'),
-  count: z.coerce.number().min(1, 'Quantity must be at least 1'),
-  hatchDate: z.date(),
-});
 
 const recordLossSchema = z.object({
     flockId: z.string().min(1, "Please select a flock"),
@@ -83,7 +77,10 @@ const recordLossSchema = z.object({
 
 export default function InventoryPage() {
   const [isAddFlockOpen, setAddFlockOpen] = useState(false);
+  const [isEditFlockOpen, setEditFlockOpen] = useState(false);
   const [isRecordLossOpen, setRecordLossOpen] = useState(false);
+  const [selectedFlock, setSelectedFlock] = useState<Flock | null>(null);
+
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
 
@@ -94,43 +91,58 @@ export default function InventoryPage() {
 
   const { data: flocks, isLoading } = useCollection<Flock>(flocksRef);
 
-  const addFlockForm = useForm<z.infer<typeof addFlockSchema>>({
-    resolver: zodResolver(addFlockSchema),
+  const form = useForm<z.infer<typeof flockSchema>>({
+    resolver: zodResolver(flockSchema),
     defaultValues: {
       breed: '',
       count: 100,
       hatchDate: new Date(),
-    },
-  });
-
-  const recordLossForm = useForm<z.infer<typeof recordLossSchema>>({
-    resolver: zodResolver(recordLossSchema),
-    defaultValues: {
-        flockId: '',
-        count: 1,
-    }
-  });
-
-  function onAddFlockSubmit(values: z.infer<typeof addFlockSchema>) {
-    if (!flocksRef) return;
-
-    const newFlockData = {
-      breed: values.breed,
-      count: values.count,
-      initialCount: values.count,
-      hatchDate: Timestamp.fromDate(values.hatchDate),
+      initialCount: 100,
       averageWeight: 0.1,
       totalFeedConsumed: 0,
       totalCost: 0,
-    };
-    addDocumentNonBlocking(flocksRef, newFlockData);
+    },
+  });
+
+  function onAddFlockSubmit(values: z.infer<typeof flockSchema>) {
+    if (!flocksRef) return;
+    
+    addDocumentNonBlocking(flocksRef, {
+      ...values,
+      hatchDate: Timestamp.fromDate(values.hatchDate)
+    });
     
     toast({
         title: "Flock Added",
         description: `${values.count} ${values.breed} chicks have been added to the inventory.`
     })
-    addFlockForm.reset();
+    form.reset({
+      breed: '',
+      count: 100,
+      hatchDate: new Date(),
+      initialCount: 100,
+      averageWeight: 0.1,
+      totalFeedConsumed: 0,
+      totalCost: 0,
+    });
     setAddFlockOpen(false);
+  }
+
+  function onEditFlockSubmit(values: z.infer<typeof flockSchema>) {
+    if (!user || !selectedFlock) return;
+    const flockDocRef = doc(firestore, 'users', user.uid, 'flocks', selectedFlock.id);
+    
+    updateDocumentNonBlocking(flockDocRef, {
+        ...values,
+        hatchDate: Timestamp.fromDate(values.hatchDate)
+    });
+
+    toast({
+        title: "Flock Updated",
+        description: `Flock ${selectedFlock.id.substring(0,6)}... has been updated.`
+    });
+    setEditFlockOpen(false);
+    setSelectedFlock(null);
   }
 
   function onRecordLossSubmit(values: z.infer<typeof recordLossSchema>) {
@@ -163,6 +175,24 @@ export default function InventoryPage() {
       variant: "destructive"
     })
   }
+  
+  const handleEditClick = (flock: Flock) => {
+    setSelectedFlock(flock);
+    form.reset({
+        ...flock,
+        hatchDate: flock.hatchDate.toDate()
+    });
+    setEditFlockOpen(true);
+  }
+
+  const recordLossForm = useForm<z.infer<typeof recordLossSchema>>({
+    resolver: zodResolver(recordLossSchema),
+    defaultValues: {
+        flockId: '',
+        count: 1,
+    }
+  });
+
 
   const getAgeInWeeks = (hatchDate: Timestamp) => {
     if (!hatchDate) return 0;
@@ -182,6 +212,134 @@ export default function InventoryPage() {
     const cost = flock.totalCost / flock.count;
     return `$${cost.toFixed(2)}`;
   }
+
+  const FormFields = () => (
+    <>
+        <FormField
+            control={form.control}
+            name="breed"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Breed</FormLabel>
+                <FormControl>
+                <Input placeholder="e.g., Cobb 500" {...field} />
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+        <div className="grid grid-cols-2 gap-4">
+        <FormField
+            control={form.control}
+            name="initialCount"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Initial Quantity</FormLabel>
+                <FormControl>
+                <Input type="number" {...field} />
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+        <FormField
+            control={form.control}
+            name="count"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Current Quantity</FormLabel>
+                <FormControl>
+                <Input type="number" {...field} />
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+        </div>
+        <FormField
+            control={form.control}
+            name="hatchDate"
+            render={({ field }) => (
+            <FormItem className="flex flex-col">
+                <FormLabel>Hatch Date</FormLabel>
+                <Popover>
+                <PopoverTrigger asChild>
+                    <FormControl>
+                    <Button
+                        variant={'outline'}
+                        className={cn(
+                        'w-full pl-3 text-left font-normal',
+                        !field.value && 'text-muted-foreground'
+                        )}
+                    >
+                        {field.value ? (
+                        format(field.value, 'PPP')
+                        ) : (
+                        <span>Pick a date</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                    </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                    mode="single"
+                    selected={field.value}
+                    onSelect={field.onChange}
+                    disabled={(date) =>
+                        date > new Date() || date < new Date('1900-01-01')
+                    }
+                    initialFocus
+                    />
+                </PopoverContent>
+                </Popover>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+        <div className="grid grid-cols-2 gap-4">
+        <FormField
+            control={form.control}
+            name="averageWeight"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Avg. Weight (kg)</FormLabel>
+                <FormControl>
+                <Input type="number" step="0.01" {...field} />
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+        <FormField
+            control={form.control}
+            name="totalFeedConsumed"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Total Feed (kg)</FormLabel>
+                <FormControl>
+                <Input type="number" step="0.1" {...field} />
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+        </div>
+        <FormField
+            control={form.control}
+            name="totalCost"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Total Cost ($)</FormLabel>
+                <FormControl>
+                <Input type="number" step="0.01" {...field} />
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+    </>
+  );
 
   return (
     <Card>
@@ -255,8 +413,18 @@ export default function InventoryPage() {
                     </Form>
                 </DialogContent>
             </Dialog>
-
-            <Dialog open={isAddFlockOpen} onOpenChange={setAddFlockOpen}>
+            <Dialog open={isAddFlockOpen} onOpenChange={(isOpen) => {
+                if(isOpen) form.reset({
+                    breed: '',
+                    count: 100,
+                    hatchDate: new Date(),
+                    initialCount: 100,
+                    averageWeight: 0.1,
+                    totalFeedConsumed: 0,
+                    totalCost: 0,
+                });
+                setAddFlockOpen(isOpen);
+            }}>
               <DialogTrigger asChild>
                 <Button>
                   <PlusCircle className="mr-2 h-4 w-4" />
@@ -270,80 +438,37 @@ export default function InventoryPage() {
                     Enter the details for the new flock of chicks.
                   </DialogDescription>
                 </DialogHeader>
-                <Form {...addFlockForm}>
-                  <form onSubmit={addFlockForm.handleSubmit(onAddFlockSubmit)} className="space-y-4">
-                    <FormField
-                      control={addFlockForm.control}
-                      name="breed"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Breed</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., Cobb 500" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={addFlockForm.control}
-                      name="count"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Quantity</FormLabel>
-                          <FormControl>
-                            <Input type="number" placeholder="e.g., 500" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={addFlockForm.control}
-                      name="hatchDate"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>Hatch Date</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant={'outline'}
-                                  className={cn(
-                                    'w-full pl-3 text-left font-normal',
-                                    !field.value && 'text-muted-foreground'
-                                  )}
-                                >
-                                  {field.value ? (
-                                    format(field.value, 'PPP')
-                                  ) : (
-                                    <span>Pick a date</span>
-                                  )}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) =>
-                                  date > new Date() || date < new Date('1900-01-01')
-                                }
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onAddFlockSubmit)} className="space-y-4">
+                    <FormFields />
                      <DialogFooter>
                         <DialogClose asChild>
                             <Button type="button" variant="secondary">Cancel</Button>
                         </DialogClose>
                         <Button type="submit">Add Flock</Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+
+            {/* Edit Flock Dialog */}
+            <Dialog open={isEditFlockOpen} onOpenChange={setEditFlockOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit Flock</DialogTitle>
+                  <DialogDescription>
+                    Update the details for this flock.
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onEditFlockSubmit)} className="space-y-4">
+                    <FormFields />
+                     <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="secondary">Cancel</Button>
+                        </DialogClose>
+                        <Button type="submit">Save Changes</Button>
                     </DialogFooter>
                   </form>
                 </Form>
@@ -393,6 +518,9 @@ export default function InventoryPage() {
                 <TableCell className="text-right">{calculateFCR(flock)}</TableCell>
                 <TableCell className="text-right">{calculateCostPerBird(flock)}</TableCell>
                 <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={() => handleEditClick(flock)}>
+                        <Pencil className="h-4 w-4" />
+                    </Button>
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
