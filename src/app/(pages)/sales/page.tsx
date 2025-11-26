@@ -24,8 +24,8 @@ import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import type { Sale, Flock } from '@/lib/types';
 import { saleSchema } from '@/lib/types';
-import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { collection, Timestamp } from 'firebase/firestore';
+import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { collection, Timestamp, doc } from 'firebase/firestore';
 import { z } from 'zod';
 
 export default function SalesPage() {
@@ -57,7 +57,35 @@ export default function SalesPage() {
   });
 
   function onSubmit(values: z.infer<typeof saleSchema>) {
-    if (!salesRef) return;
+    if (!salesRef || !user || !flocks) return;
+    
+    // Find the selected flock
+    const flockToUpdate = flocks.find(f => f.id === values.flockId);
+
+    if (!flockToUpdate) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not find the selected flock.",
+        });
+        return;
+    }
+    
+    if (values.quantity > flockToUpdate.count) {
+        toast({
+            variant: "destructive",
+            title: "Not enough birds",
+            description: `You only have ${flockToUpdate.count} birds in flock ${flockToUpdate.id.substring(0,6)}, but are trying to sell ${values.quantity}.`,
+        });
+        return;
+    }
+
+    // Deduct sold birds from flock
+    const newCount = flockToUpdate.count - values.quantity;
+    const flockDocRef = doc(firestore, 'users', user.uid, 'flocks', values.flockId);
+    updateDocumentNonBlocking(flockDocRef, { count: newCount });
+
+    // Record the sale
     const total = values.quantity * values.pricePerUnit;
     const newSale = {
       ...values,
@@ -100,7 +128,7 @@ export default function SalesPage() {
                         <SelectContent>
                           {flocks?.map((flock) => (
                             <SelectItem key={flock.id} value={flock.id}>
-                              {flock.breed} ({flock.id.substring(0,6)}...)
+                              {flock.breed} ({flock.count} birds)
                             </SelectItem>
                           ))}
                         </SelectContent>
