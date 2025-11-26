@@ -107,10 +107,12 @@ export default function InventoryPage() {
   function onAddFlockSubmit(values: z.infer<typeof flockSchema>) {
     if (!flocksRef) return;
     
-    addDocumentNonBlocking(flocksRef, {
+    const newFlockData = {
       ...values,
       hatchDate: Timestamp.fromDate(values.hatchDate)
-    });
+    };
+
+    addDocumentNonBlocking(flocksRef, newFlockData);
     
     toast({
         title: "Flock Added",

@@ -49,7 +49,7 @@ import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, up
 import { collection, Timestamp, doc } from 'firebase/firestore';
 import { z } from 'zod';
 
-const expenditureCategories = ['Feed', 'Medicine', 'Utilities', 'Labor', 'Equipment', 'Maintenance', 'Other'];
+const expenditureCategories = ['Feed', 'Medicine', 'Utilities', 'Labor', 'Equipment', 'Maintenance', 'Day Old Chicks', 'Other'];
 
 export default function ExpenditurePage() {
   const [isAddExpenseOpen, setAddExpenseOpen] = useState(false);
