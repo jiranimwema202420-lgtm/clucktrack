@@ -299,7 +299,7 @@ export default function ExpenditurePage() {
                         </div>
                         <DialogFooter>
                             <DialogClose asChild><Button variant="secondary" type="button">Cancel</Button></DialogClose>
-                            <Button type="submit">Record Expense</Button>
+                            <Button type="submit">Save Expense</Button>
                         </DialogFooter>
                     </form>
                 </Form>
