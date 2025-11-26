@@ -15,7 +15,7 @@ import {
   ChartLegendContent,
 } from '@/components/ui/chart';
 import { mockReportData } from '@/lib/data';
-import { BarChart, Bar, XAxis, YAxis, LineChart, Line, CartesianGrid, TooltipProps } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, LineChart, Line, CartesianGrid, Tooltip, TooltipProps } from 'recharts';
 import { TrendingDown, Scale, Utensils } from 'lucide-react';
 import { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
 
