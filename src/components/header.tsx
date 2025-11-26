@@ -18,6 +18,8 @@ import { ChevronsUpDown, User, UserCog, UserCheck } from 'lucide-react';
 const pathToTitle: { [key: string]: string } = {
   '/dashboard': 'Dashboard',
   '/inventory': 'Inventory Management',
+  '/sales': 'Sales Management',
+  '/expenditure': 'Expenditure Tracking',
   '/reports': 'Performance Reports',
   '/feed-optimization': 'AI Feed Optimizer',
   '/health-prediction': 'AI Health Predictor',

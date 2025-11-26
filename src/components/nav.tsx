@@ -8,6 +8,8 @@ import {
   BarChart3, 
   BrainCircuit, 
   HeartPulse,
+  DollarSign,
+  ShoppingCart,
 } from 'lucide-react';
 import {
   SidebarHeader,
@@ -21,6 +23,8 @@ import { Logo } from '@/components/logo';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/inventory', label: 'Inventory', icon: Boxes },
+  { href: '/sales', label: 'Sales', icon: DollarSign },
+  { href: '/expenditure', label: 'Expenditure', icon: ShoppingCart },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
   { href: '/feed-optimization', label: 'Feed AI', icon: BrainCircuit },
   { href: '/health-prediction', label: 'Health AI', icon: HeartPulse },
