@@ -19,7 +19,6 @@ export interface Flock {
   breed: string;
   count: number;
   initialCount: number;
-  age: number; // in weeks
   averageWeight: number; // in kg
   hatchDate: Timestamp;
   totalFeedConsumed: number; // in kg
@@ -51,3 +50,10 @@ export interface Expenditure extends z.infer<typeof expenditureSchema> {
   id: string,
   expenditureDate: Timestamp,
 };
+
+export interface ReportData {
+    date: string;
+    mortality: number;
+    fcr: number;
+    avgWeight: number;
+}

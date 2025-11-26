@@ -21,7 +21,6 @@ export const mockFlocks: Flock[] = [
     breed: 'Cobb 500',
     count: 1936,
     initialCount: 2000,
-    age: 5,
     averageWeight: 1.8,
     hatchDate: Timestamp.fromDate(new Date('2024-05-20')),
     totalFeedConsumed: 5200,
