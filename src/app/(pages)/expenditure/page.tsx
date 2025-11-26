@@ -24,6 +24,8 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Calendar as CalendarIcon } from 'lucide-react';
+import { mockExpenditures } from '@/lib/data';
+import type { Expenditure } from '@/lib/types';
 
 const expenditureSchema = z.object({
   category: z.string().min(1, 'Please select a category'),
@@ -31,14 +33,6 @@ const expenditureSchema = z.object({
   description: z.string().optional(),
   expenditureDate: z.date(),
 });
-
-type Expenditure = z.infer<typeof expenditureSchema> & { id: string };
-
-const mockExpenditures: Expenditure[] = [
-    { id: 'EXP-001', category: 'Feed', amount: 1200, description: 'Starter feed for FLK-002', expenditureDate: new Date('2024-06-29') },
-    { id: 'EXP-002', category: 'Medicine', amount: 150, description: 'Vaccines for new chicks', expenditureDate: new Date('2024-06-28') },
-    { id: 'EXP-003', category: 'Utilities', amount: 350, description: 'Electricity bill', expenditureDate: new Date('2024-06-25') },
-];
 
 const expenditureCategories = ['Feed', 'Medicine', 'Utilities', 'Labor', 'Equipment', 'Maintenance', 'Other'];
 

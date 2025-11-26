@@ -23,7 +23,8 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Calendar as CalendarIcon } from 'lucide-react';
-import { mockFlocks } from '@/lib/data';
+import { mockFlocks, mockSales } from '@/lib/data';
+import type { Sale } from '@/lib/types';
 
 const saleSchema = z.object({
   flockId: z.string().min(1, 'Please select a flock'),
@@ -33,12 +34,6 @@ const saleSchema = z.object({
   saleDate: z.date(),
 });
 
-type Sale = z.infer<typeof saleSchema> & { id: string, total: number };
-
-const mockSales: Sale[] = [
-    { id: 'SALE-001', flockId: 'FLK-003', quantity: 50, pricePerUnit: 10, customer: 'Local Restaurant', saleDate: new Date('2024-06-28'), total: 500 },
-    { id: 'SALE-002', flockId: 'FLK-001', quantity: 100, pricePerUnit: 9.5, customer: 'Butcher Shop', saleDate: new Date('2024-06-25'), total: 950 },
-];
 
 export default function SalesPage() {
   const [sales, setSales] = useState<Sale[]>(mockSales);

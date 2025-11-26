@@ -10,6 +10,7 @@ import {
   HeartPulse,
   DollarSign,
   ShoppingCart,
+  FileOutput
 } from 'lucide-react';
 import {
   SidebarHeader,
@@ -25,6 +26,7 @@ const navItems = [
   { href: '/inventory', label: 'Inventory', icon: Boxes },
   { href: '/sales', label: 'Sales', icon: DollarSign },
   { href: '/expenditure', label: 'Expenditure', icon: ShoppingCart },
+  { href: '/financials', label: 'Financials', icon: FileOutput },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
   { href: '/feed-optimization', label: 'Feed AI', icon: BrainCircuit },
   { href: '/health-prediction', label: 'Health AI', icon: HeartPulse },
