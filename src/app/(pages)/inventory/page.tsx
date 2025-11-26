@@ -148,14 +148,15 @@ export default function InventoryPage() {
   };
 
   const calculateFCR = (flock: Flock) => {
+    if (!flock.count || !flock.averageWeight || !flock.totalFeedConsumed) return 'N/A';
     const totalWeight = flock.count * flock.averageWeight;
-    if (totalWeight === 0 || !flock.totalFeedConsumed) return 'N/A';
+    if (totalWeight === 0) return 'N/A';
     const fcr = flock.totalFeedConsumed / totalWeight;
     return fcr.toFixed(2);
   }
 
   const calculateCostPerBird = (flock: Flock) => {
-    if(flock.count === 0 || !flock.totalCost) return 'N/A';
+    if(!flock.count || !flock.totalCost) return 'N/A';
     const cost = flock.totalCost / flock.count;
     return `$${cost.toFixed(2)}`;
   }
