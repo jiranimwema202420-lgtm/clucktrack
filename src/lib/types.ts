@@ -52,13 +52,15 @@ export interface Sale extends z.infer<typeof saleSchema> {
 
 export const expenditureSchema = z.object({
   category: z.string().min(1, 'Please select a category'),
-  amount: z.coerce.number().min(0.01, 'Amount must be positive'),
+  quantity: z.coerce.number().min(0, 'Quantity must be a positive number.'),
+  unitPrice: z.coerce.number().min(0, 'Unit price must be a positive number.'),
   description: z.string().optional(),
   expenditureDate: z.date(),
 });
 
 export interface Expenditure extends z.infer<typeof expenditureSchema> { 
   id: string,
+  amount: number,
   expenditureDate: Timestamp,
 };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -70,23 +70,43 @@ export default function ExpenditurePage() {
     resolver: zodResolver(expenditureSchema),
     defaultValues: {
       category: '',
-      amount: 0,
+      quantity: 1,
+      unitPrice: 0,
       description: '',
       expenditureDate: new Date(),
     },
   });
 
+  const watchQuantity = form.watch('quantity');
+  const watchUnitPrice = form.watch('unitPrice');
+  const [calculatedAmount, setCalculatedAmount] = useState(0);
+
+  useEffect(() => {
+    const amount = (watchQuantity || 0) * (watchUnitPrice || 0);
+    setCalculatedAmount(amount);
+  }, [watchQuantity, watchUnitPrice]);
+
   function onSubmit(values: z.infer<typeof expenditureSchema>) {
     if (!expendituresRef) return;
+    const amount = values.quantity * values.unitPrice;
+    if (amount <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Amount",
+        description: "Total amount must be greater than zero.",
+      });
+      return;
+    }
     const newExpenditure = {
       ...values,
       expenditureDate: Timestamp.fromDate(values.expenditureDate),
+      amount: amount
     };
     addDocumentNonBlocking(expendituresRef, newExpenditure);
 
     toast({
       title: 'Expenditure Recorded',
-      description: `Recorded $${values.amount.toFixed(2)} for ${values.category}.`,
+      description: `Recorded $${amount.toFixed(2)} for ${values.category}.`,
     });
     form.reset();
     setAddExpenseOpen(false);
@@ -94,10 +114,20 @@ export default function ExpenditurePage() {
 
   function onEditSubmit(values: z.infer<typeof expenditureSchema>) {
     if (!user || !selectedExpense) return;
+    const amount = values.quantity * values.unitPrice;
+    if (amount <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Amount",
+        description: "Total amount must be greater than zero.",
+      });
+      return;
+    }
     const expenditureDocRef = doc(firestore, 'users', user.uid, 'expenditures', selectedExpense.id);
     const updatedExpenditure = {
         ...values,
         expenditureDate: Timestamp.fromDate(values.expenditureDate),
+        amount: amount,
     };
     updateDocumentNonBlocking(expenditureDocRef, updatedExpenditure);
     toast({
@@ -154,19 +184,40 @@ export default function ExpenditurePage() {
             </FormItem>
             )}
         />
-        <FormField
-            control={form.control}
-            name="amount"
-            render={({ field }) => (
-            <FormItem>
-                <FormLabel>Amount ($)</FormLabel>
-                <FormControl>
-                <Input type="number" step="0.01" placeholder="e.g., 250.00" {...field} />
-                </FormControl>
-                <FormMessage />
-            </FormItem>
-            )}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+              control={form.control}
+              name="quantity"
+              render={({ field }) => (
+              <FormItem>
+                  <FormLabel>Quantity</FormLabel>
+                  <FormControl>
+                  <Input type="number" placeholder="e.g., 10" {...field} />
+                  </FormControl>
+                  <FormMessage />
+              </FormItem>
+              )}
+          />
+          <FormField
+              control={form.control}
+              name="unitPrice"
+              render={({ field }) => (
+              <FormItem>
+                  <FormLabel>Unit Price ($)</FormLabel>
+                  <FormControl>
+                  <Input type="number" step="0.01" placeholder="e.g., 25.00" {...field} />
+                  </FormControl>
+                  <FormMessage />
+              </FormItem>
+              )}
+          />
+        </div>
+        <FormItem>
+            <FormLabel>Total Amount ($)</FormLabel>
+            <FormControl>
+                <Input type="text" readOnly value={calculatedAmount.toFixed(2)} className="bg-muted" />
+            </FormControl>
+        </FormItem>
         <FormField
             control={form.control}
             name="description"
@@ -225,7 +276,7 @@ export default function ExpenditurePage() {
           </CardHeader>
           <CardContent>
             <Button className="w-full" onClick={() => {
-                form.reset({ category: '', amount: 0, description: '', expenditureDate: new Date() });
+                form.reset({ category: '', quantity: 1, unitPrice: 0, description: '', expenditureDate: new Date() });
                 setAddExpenseOpen(true);
             }}>
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -288,6 +339,8 @@ export default function ExpenditurePage() {
                   <TableHead>Date</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Description</TableHead>
+                  <TableHead className="text-right">Qty</TableHead>
+                  <TableHead className="text-right">Unit Price</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -295,14 +348,14 @@ export default function ExpenditurePage() {
               <TableBody>
                 {isLoading && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={7} className="text-center">
                       <Loader2 className="mx-auto h-8 w-8 animate-spin" />
                     </TableCell>
                   </TableRow>
                 )}
                  {!isLoading && expenditures?.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={7} className="text-center">
                       No expenditures recorded yet.
                     </TableCell>
                   </TableRow>
@@ -312,6 +365,8 @@ export default function ExpenditurePage() {
                     <TableCell>{format(expense.expenditureDate.toDate(), 'yyyy-MM-dd')}</TableCell>
                     <TableCell>{expense.category}</TableCell>
                     <TableCell className="truncate max-w-xs">{expense.description}</TableCell>
+                    <TableCell className="text-right">{expense.quantity}</TableCell>
+                    <TableCell className="text-right">${expense.unitPrice.toFixed(2)}</TableCell>
                     <TableCell className="text-right">${expense.amount.toFixed(2)}</TableCell>
                     <TableCell className="text-right">
                         <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={() => handleEditClick(expense)}>

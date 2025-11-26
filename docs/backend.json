@@ -100,6 +100,14 @@
           "type": "string",
           "description": "Category of the expense."
         },
+        "quantity": {
+          "type": "number",
+          "description": "Quantity of items purchased."
+        },
+        "unitPrice": {
+          "type": "number",
+          "description": "Price per unit of the item."
+        },
         "amount": {
           "type": "number",
           "description": "Amount of the expense."
@@ -117,6 +125,8 @@
       "required": [
         "id",
         "category",
+        "quantity",
+        "unitPrice",
         "amount",
         "expenditureDate"
       ]
