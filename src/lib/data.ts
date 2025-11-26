@@ -21,6 +21,8 @@ export const mockFlocks: Flock[] = [
     age: 5,
     averageWeight: 1.8,
     hatchDate: '2024-05-20',
+    totalFeedConsumed: 5200,
+    totalCost: 2340,
   },
   {
     id: 'FLK-002',
@@ -29,6 +31,8 @@ export const mockFlocks: Flock[] = [
     age: 3,
     averageWeight: 0.9,
     hatchDate: '2024-06-10',
+    totalFeedConsumed: 2200,
+    totalCost: 990,
   },
   {
     id: 'FLK-003',
@@ -37,6 +41,8 @@ export const mockFlocks: Flock[] = [
     age: 8,
     averageWeight: 2.5,
     hatchDate: '2024-04-29',
+    totalFeedConsumed: 11025,
+    totalCost: 4961,
   },
     {
     id: 'FLK-004',
@@ -45,6 +51,8 @@ export const mockFlocks: Flock[] = [
     age: 22,
     averageWeight: 1.5,
     hatchDate: '2024-01-15',
+    totalFeedConsumed: 5500,
+    totalCost: 2475,
   },
 ];
 

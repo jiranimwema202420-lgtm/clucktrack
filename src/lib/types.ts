@@ -20,6 +20,8 @@ export type Flock = {
   age: number; // in weeks
   averageWeight: number; // in kg
   hatchDate: string;
+  totalFeedConsumed: number; // in kg
+  totalCost: number; // in $
 };
 
 export type ReportData = {

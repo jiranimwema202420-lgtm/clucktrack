@@ -100,7 +100,9 @@ export default function InventoryPage() {
       count: values.count,
       hatchDate: format(values.hatchDate, 'yyyy-MM-dd'),
       age: 0, 
-      averageWeight: 0.1
+      averageWeight: 0.1,
+      totalFeedConsumed: 0,
+      totalCost: 0,
     };
     setFlocks([newFlock, ...flocks]);
     toast({
@@ -126,6 +128,19 @@ export default function InventoryPage() {
     })
     recordLossForm.reset();
     setRecordLossOpen(false);
+  }
+
+  const calculateFCR = (flock: Flock) => {
+    const totalWeight = flock.count * flock.averageWeight;
+    if (totalWeight === 0) return 'N/A';
+    const fcr = flock.totalFeedConsumed / totalWeight;
+    return fcr.toFixed(2);
+  }
+
+  const calculateCostPerBird = (flock: Flock) => {
+    if(flock.count === 0) return 'N/A';
+    const cost = flock.totalCost / flock.count;
+    return `$${cost.toFixed(2)}`;
   }
 
   return (
@@ -304,9 +319,10 @@ export default function InventoryPage() {
               <TableHead>Flock ID</TableHead>
               <TableHead>Breed</TableHead>
               <TableHead className="text-right">Quantity</TableHead>
-              <TableHead className="text-right">Age (Weeks)</TableHead>
-              <TableHead className="text-right">Avg. Weight (kg)</TableHead>
-              <TableHead>Hatch Date</TableHead>
+              <TableHead className="text-right">Age (w)</TableHead>
+              <TableHead className="text-right">Avg. Wt (kg)</TableHead>
+              <TableHead className="text-right">FCR</TableHead>
+              <TableHead className="text-right">Cost/Bird</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -319,7 +335,8 @@ export default function InventoryPage() {
                 <TableCell className="text-right">{flock.count.toLocaleString()}</TableCell>
                 <TableCell className="text-right">{flock.age}</TableCell>
                 <TableCell className="text-right">{flock.averageWeight.toFixed(2)}</TableCell>
-                <TableCell>{flock.hatchDate}</TableCell>
+                <TableCell className="text-right">{calculateFCR(flock)}</TableCell>
+                <TableCell className="text-right">{calculateCostPerBird(flock)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
