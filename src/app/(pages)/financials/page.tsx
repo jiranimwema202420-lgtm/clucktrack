@@ -8,17 +8,34 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { StatsCard } from '@/components/dashboard/stats-card';
-import { mockExpenditures, mockSales } from '@/lib/data';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Line, ComposedChart } from 'recharts';
-import { DollarSign, TrendingUp, TrendingDown, ChevronsUpDown } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, ChevronsUpDown, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import type { Sale, Expenditure } from '@/lib/types';
+
 
 export default function FinancialsPage() {
-  const totalRevenue = mockSales.reduce((sum, sale) => sum + sale.total, 0);
-  const totalExpenditure = mockExpenditures.reduce((sum, expense) => sum + expense.amount, 0);
+  const { firestore, user } = useFirebase();
+
+  const salesRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(firestore, 'users', user.uid, 'sales');
+  }, [firestore, user]);
+  const { data: sales, isLoading: isLoadingSales } = useCollection<Sale>(salesRef);
+
+  const expendituresRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(firestore, 'users', user.uid, 'expenditures');
+  }, [firestore, user]);
+  const { data: expenditures, isLoading: isLoadingExpenditures } = useCollection<Expenditure>(expendituresRef);
+  
+  const totalRevenue = sales?.reduce((sum, sale) => sum + sale.total, 0) || 0;
+  const totalExpenditure = expenditures?.reduce((sum, expense) => sum + expense.amount, 0) || 0;
   const netProfit = totalRevenue - totalExpenditure;
 
-  const combinedData = [...mockSales.map(s => ({ date: format(s.saleDate, 'yyyy-MM'), revenue: s.total, expenditure: 0 })), ...mockExpenditures.map(e => ({ date: format(e.expenditureDate, 'yyyy-MM'), revenue: 0, expenditure: e.amount }))]
+  const combinedData = [...(sales || []).map(s => ({ date: format(s.saleDate.toDate(), 'yyyy-MM'), revenue: s.total, expenditure: 0 })), ...(expenditures || []).map(e => ({ date: format(e.expenditureDate.toDate(), 'yyyy-MM'), revenue: 0, expenditure: e.amount }))]
     .reduce((acc, record) => {
         const existing = acc.find(item => item.date === record.date);
         if (existing) {
@@ -32,6 +49,13 @@ export default function FinancialsPage() {
     .map(d => ({ ...d, profit: d.revenue - d.expenditure }))
     .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
+  if (isLoadingSales || isLoadingExpenditures) {
+      return (
+        <div className="flex justify-center items-center h-96">
+            <Loader2 className="h-16 w-16 animate-spin"/>
+        </div>
+      )
+  }
 
   return (
     <div className="flex flex-col gap-8">

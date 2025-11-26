@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import {
   Table,
   TableBody,
@@ -23,22 +22,25 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Calendar as CalendarIcon } from 'lucide-react';
-import { mockExpenditures } from '@/lib/data';
+import { PlusCircle, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import type { Expenditure } from '@/lib/types';
-
-const expenditureSchema = z.object({
-  category: z.string().min(1, 'Please select a category'),
-  amount: z.coerce.number().min(0.01, 'Amount must be positive'),
-  description: z.string().optional(),
-  expenditureDate: z.date(),
-});
+import { expenditureSchema } from '@/lib/types';
+import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { collection, Timestamp } from 'firebase/firestore';
+import { z } from 'zod';
 
 const expenditureCategories = ['Feed', 'Medicine', 'Utilities', 'Labor', 'Equipment', 'Maintenance', 'Other'];
 
 export default function ExpenditurePage() {
-  const [expenditures, setExpenditures] = useState<Expenditure[]>(mockExpenditures);
   const { toast } = useToast();
+  const { firestore, user } = useFirebase();
+
+  const expendituresRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(firestore, 'users', user.uid, 'expenditures');
+  }, [firestore, user]);
+
+  const { data: expenditures, isLoading } = useCollection<Expenditure>(expendituresRef);
 
   const form = useForm<z.infer<typeof expenditureSchema>>({
     resolver: zodResolver(expenditureSchema),
@@ -51,11 +53,13 @@ export default function ExpenditurePage() {
   });
 
   function onSubmit(values: z.infer<typeof expenditureSchema>) {
-    const newExpenditure: Expenditure = {
-      id: `EXP-${String(expenditures.length + 1).padStart(3, '0')}`,
+    if (!expendituresRef) return;
+    const newExpenditure = {
       ...values,
+      expenditureDate: Timestamp.fromDate(values.expenditureDate),
     };
-    setExpenditures([newExpenditure, ...expenditures]);
+    addDocumentNonBlocking(expendituresRef, newExpenditure);
+
     toast({
       title: 'Expenditure Recorded',
       description: `Recorded $${values.amount.toFixed(2)} for ${values.category}.`,
@@ -184,9 +188,23 @@ export default function ExpenditurePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {expenditures.map((expense) => (
+                {isLoading && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center">
+                      <Loader2 className="mx-auto h-8 w-8 animate-spin" />
+                    </TableCell>
+                  </TableRow>
+                )}
+                 {!isLoading && expenditures?.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center">
+                      No expenditures recorded yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {expenditures?.map((expense) => (
                   <TableRow key={expense.id}>
-                    <TableCell>{format(expense.expenditureDate, 'yyyy-MM-dd')}</TableCell>
+                    <TableCell>{format(expense.expenditureDate.toDate(), 'yyyy-MM-dd')}</TableCell>
                     <TableCell>{expense.category}</TableCell>
                     <TableCell className="truncate max-w-xs">{expense.description}</TableCell>
                     <TableCell className="text-right">${expense.amount.toFixed(2)}</TableCell>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -22,8 +22,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { mockFlocks as initialFlocks } from '@/lib/data';
-import { PlusCircle, MinusCircle, Calendar as CalendarIcon } from 'lucide-react';
+import { PlusCircle, MinusCircle, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -37,7 +36,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -54,9 +52,11 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, differenceInWeeks } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Flock } from '@/lib/types';
+import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { collection, Timestamp, doc } from 'firebase/firestore';
 
 
 const addFlockSchema = z.object({
@@ -71,10 +71,17 @@ const recordLossSchema = z.object({
 });
 
 export default function InventoryPage() {
-  const [flocks, setFlocks] = useState<Flock[]>(initialFlocks);
   const [isAddFlockOpen, setAddFlockOpen] = useState(false);
   const [isRecordLossOpen, setRecordLossOpen] = useState(false);
   const { toast } = useToast();
+  const { firestore, user } = useFirebase();
+
+  const flocksRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(firestore, 'users', user.uid, 'flocks');
+  }, [firestore, user]);
+
+  const { data: flocks, isLoading } = useCollection<Flock>(flocksRef);
 
   const addFlockForm = useForm<z.infer<typeof addFlockSchema>>({
     resolver: zodResolver(addFlockSchema),
@@ -94,17 +101,19 @@ export default function InventoryPage() {
   });
 
   function onAddFlockSubmit(values: z.infer<typeof addFlockSchema>) {
-    const newFlock: Flock = {
-      id: `FLK-${String(flocks.length + 1).padStart(3, '0')}`,
+    if (!flocksRef) return;
+
+    const newFlockData = {
       breed: values.breed,
       count: values.count,
-      hatchDate: format(values.hatchDate, 'yyyy-MM-dd'),
-      age: 0, 
+      initialCount: values.count,
+      hatchDate: Timestamp.fromDate(values.hatchDate),
       averageWeight: 0.1,
       totalFeedConsumed: 0,
       totalCost: 0,
     };
-    setFlocks([newFlock, ...flocks]);
+    addDocumentNonBlocking(flocksRef, newFlockData);
+    
     toast({
         title: "Flock Added",
         description: `${values.count} ${values.breed} chicks have been added to the inventory.`
@@ -114,14 +123,17 @@ export default function InventoryPage() {
   }
 
   function onRecordLossSubmit(values: z.infer<typeof recordLossSchema>) {
-    setFlocks(flocks.map(f => {
-        if(f.id === values.flockId) {
-            const newCount = f.count - values.count;
-            return {...f, count: newCount < 0 ? 0 : newCount };
-        }
-        return f;
-    }));
-    const flock = flocks.find(f => f.id === values.flockId);
+    if (!user) return;
+    const flock = flocks?.find(f => f.id === values.flockId);
+    if (!flock) return;
+
+    const newCount = flock.count - values.count;
+    const flockDocRef = doc(firestore, 'users', user.uid, 'flocks', values.flockId);
+    
+    updateDocumentNonBlocking(flockDocRef, {
+        count: newCount < 0 ? 0 : newCount
+    });
+
     toast({
         title: "Loss Recorded",
         description: `Recorded a loss of ${values.count} in flock ${flock?.id} (${flock?.breed}).`
@@ -130,15 +142,19 @@ export default function InventoryPage() {
     setRecordLossOpen(false);
   }
 
+  const getAgeInWeeks = (hatchDate: Timestamp) => {
+    return differenceInWeeks(new Date(), hatchDate.toDate());
+  };
+
   const calculateFCR = (flock: Flock) => {
     const totalWeight = flock.count * flock.averageWeight;
-    if (totalWeight === 0) return 'N/A';
+    if (totalWeight === 0 || !flock.totalFeedConsumed) return 'N/A';
     const fcr = flock.totalFeedConsumed / totalWeight;
     return fcr.toFixed(2);
   }
 
   const calculateCostPerBird = (flock: Flock) => {
-    if(flock.count === 0) return 'N/A';
+    if(flock.count === 0 || !flock.totalCost) return 'N/A';
     const cost = flock.totalCost / flock.count;
     return `$${cost.toFixed(2)}`;
   }
@@ -154,7 +170,7 @@ export default function InventoryPage() {
           <div className="flex gap-2">
             <Dialog open={isRecordLossOpen} onOpenChange={setRecordLossOpen}>
                 <DialogTrigger asChild>
-                    <Button variant="outline">
+                    <Button variant="outline" disabled={!flocks || flocks.length === 0}>
                         <MinusCircle className="mr-2 h-4 w-4" />
                         Record Loss
                     </Button>
@@ -181,9 +197,9 @@ export default function InventoryPage() {
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                {flocks.map(flock => (
+                                                {flocks?.map(flock => (
                                                     <SelectItem key={flock.id} value={flock.id}>
-                                                        {flock.id} - {flock.breed} ({flock.count} birds)
+                                                        {flock.id.substring(0,6)}... - {flock.breed} ({flock.count} birds)
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -326,14 +342,28 @@ export default function InventoryPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {flocks.map((flock) => (
+            {isLoading && (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center">
+                  <Loader2 className="mx-auto h-8 w-8 animate-spin" />
+                </TableCell>
+              </TableRow>
+            )}
+            {!isLoading && flocks?.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center">
+                  No flocks found. Add some chicks to get started.
+                </TableCell>
+              </TableRow>
+            )}
+            {flocks?.map((flock) => (
               <TableRow key={flock.id}>
                 <TableCell className="font-medium">
-                  <Badge variant="secondary">{flock.id}</Badge>
+                  <Badge variant="secondary">{flock.id.substring(0,6)}...</Badge>
                 </TableCell>
                 <TableCell>{flock.breed}</TableCell>
                 <TableCell className="text-right">{flock.count.toLocaleString()}</TableCell>
-                <TableCell className="text-right">{flock.age}</TableCell>
+                <TableCell className="text-right">{getAgeInWeeks(flock.hatchDate)}</TableCell>
                 <TableCell className="text-right">{flock.averageWeight.toFixed(2)}</TableCell>
                 <TableCell className="text-right">{calculateFCR(flock)}</TableCell>
                 <TableCell className="text-right">{calculateCostPerBird(flock)}</TableCell>

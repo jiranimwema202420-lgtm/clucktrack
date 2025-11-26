@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { Timestamp } from 'firebase/firestore';
 
 export type SensorData = {
   temperature: number;
@@ -13,25 +14,19 @@ export type Kpi = {
   eggsPerDay: number;
 };
 
-export type Flock = {
+export interface Flock {
   id: string;
   breed: string;
   count: number;
+  initialCount: number;
   age: number; // in weeks
   averageWeight: number; // in kg
-  hatchDate: string;
+  hatchDate: Timestamp;
   totalFeedConsumed: number; // in kg
   totalCost: number; // in $
 };
 
-export type ReportData = {
-  date: string;
-  mortality: number;
-  fcr: number; // Feed Conversion Ratio
-  avgWeight: number;
-};
-
-const saleSchema = z.object({
+export const saleSchema = z.object({
   flockId: z.string().min(1, 'Please select a flock'),
   quantity: z.coerce.number().min(1, 'Quantity must be at least 1'),
   pricePerUnit: z.coerce.number().min(0.01, 'Price must be positive'),
@@ -39,13 +34,20 @@ const saleSchema = z.object({
   saleDate: z.date(),
 });
 
-export type Sale = z.infer<typeof saleSchema> & { id: string, total: number };
+export interface Sale extends z.infer<typeof saleSchema> {
+  id: string, 
+  total: number,
+  saleDate: Timestamp,
+};
 
-const expenditureSchema = z.object({
+export const expenditureSchema = z.object({
   category: z.string().min(1, 'Please select a category'),
   amount: z.coerce.number().min(0.01, 'Amount must be positive'),
   description: z.string().optional(),
   expenditureDate: z.date(),
 });
 
-export type Expenditure = z.infer<typeof expenditureSchema> & { id: string };
+export interface Expenditure extends z.infer<typeof expenditureSchema> { 
+  id: string,
+  expenditureDate: Timestamp,
+};

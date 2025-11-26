@@ -9,7 +9,7 @@
  * Data Structure:
  * All data is organized hierarchically under the `/users/{userId}` path. This structure naturally
  * segments data by owner, allowing for clear, efficient, and secure path-based authorization rules.
- * For example, a user's chicken batches are stored at `/users/{userId}/chickenBatches/{chickenBatchId}`.
+ * For example, a user's flocks are stored at `/users/{userId}/flocks/{flockId}`.
  *
  * Key Security Decisions:
  * - Strict Ownership: All read and write operations are restricted to the authenticated user
@@ -20,17 +20,6 @@
  *   in the root `/users` collection, protecting user privacy.
  * - Self-Creation of User Profile: A user can create their own user profile document, but only
  *   if the document ID matches their authentication UID, ensuring data integrity.
- *
- * Denormalization for Authorization:
- * While the data structure relies on path-based ownership, rules are designed to be simple
- * and performant, avoiding cross-document `get()` calls. For the user profile, the document's
- * internal `id` field is validated against the path's `userId` on creation to enforce
- * relational integrity from the start.
- *
- * Structural Segregation:
- * The data model perfectly segregates each user's data into their own document tree. This
- * design simplifies security rules, as all documents within a user's subcollection (e.g.,
- * `/users/{userId}/housing`) share the same ownership-based security posture.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -51,16 +40,6 @@ service cloud.firestore {
       return resource != null;
     }
 
-    /**
-     * @description Secures user profile documents. Allows a user to create, read, update,
-     *              and delete their own profile, but not see others' profiles.
-     * @path /users/{userId}
-     * @allow (create) An authenticated user creating their own profile document.
-     *        auth.uid: "user_abc", path: /users/user_abc
-     * @deny (get) An authenticated user trying to read another user's profile.
-     *       auth.uid: "user_abc", path: /users/user_xyz
-     * @principle Restricts access to a user's own data and allows self-creation.
-     */
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if false;
@@ -68,94 +47,16 @@ service cloud.firestore {
       allow update: if isOwner(userId) && isExistingDocument() && request.resource.data.id == resource.data.id;
       allow delete: if isOwner(userId) && isExistingDocument();
 
-      /**
-       * @description Secures user-owned housing documents. The user has full CRUD access
-       *              to their own housing data.
-       * @path /users/{userId}/housing/{housingId}
-       * @allow (list) The owner listing their own housing units.
-       *        auth.uid: "user_abc", path: /users/user_abc/housing
-       * @deny (create) Another user trying to create a housing unit in someone else's space.
-       *       auth.uid: "user_xyz", path: /users/user_abc/housing/house1
-       * @principle Enforces strict document ownership within a user's data tree.
-       */
-      match /housing/{housingId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId);
-        allow update: if isOwner(userId) && isExistingDocument();
-        allow delete: if isOwner(userId) && isExistingDocument();
+      match /flocks/{flockId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      match /sales/{saleId} {
+        allow read, write: if isOwner(userId);
       }
 
-      /**
-       * @description Secures user-owned feed type documents. The user has full CRUD access
-       *              to their own feed type data.
-       * @path /users/{userId}/feedTypes/{feedTypeId}
-       * @allow (get) The owner reading their own feed type document.
-       *        auth.uid: "user_abc", path: /users/user_abc/feedTypes/feed1
-       * @deny (list) An unauthenticated user trying to list feed types.
-       *       auth: null, path: /users/user_abc/feedTypes
-       * @principle Enforces strict document ownership within a user's data tree.
-       */
-      match /feedTypes/{feedTypeId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId);
-        allow update: if isOwner(userId) && isExistingDocument();
-        allow delete: if isOwner(userId) && isExistingDocument();
-      }
-
-      /**
-       * @description Secures user-owned temperature sensor documents. The user has full
-       *              CRUD access to their own sensor data.
-       * @path /users/{userId}/temperatureSensors/{temperatureSensorId}
-       * @allow (update) The owner updating their own sensor data.
-       *        auth.uid: "user_abc", path: /users/user_abc/temperatureSensors/sensor1
-       * @deny (delete) Another user deleting a sensor from a different user's account.
-       *       auth.uid: "user_xyz", path: /users/user_abc/temperatureSensors/sensor1
-       * @principle Enforces strict document ownership within a user's data tree.
-       */
-      match /temperatureSensors/{temperatureSensorId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId);
-        allow update: if isOwner(userId) && isExistingDocument();
-        allow delete: if isOwner(userId) && isExistingDocument();
-      }
-
-      /**
-       * @description Secures user-owned chicken batch documents. The user has full CRUD
-       *              access to their own batch data.
-       * @path /users/{userId}/chickenBatches/{chickenBatchId}
-       * @allow (create) The owner creating a new chicken batch.
-       *        auth.uid: "user_abc", path: /users/user_abc/chickenBatches/batch1
-       * @deny (get) A different authenticated user trying to read a batch.
-       *       auth.uid: "user_xyz", path: /users/user_abc/chickenBatches/batch1
-       * @principle Enforces strict document ownership within a user's data tree.
-       */
-      match /chickenBatches/{chickenBatchId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId);
-        allow update: if isOwner(userId) && isExistingDocument();
-        allow delete: if isOwner(userId) && isExistingDocument();
-
-        /**
-         * @description Secures user-owned alerts nested under a specific chicken batch.
-         *              Access is inherited from the parent user document.
-         * @path /users/{userId}/chickenBatches/{chickenBatchId}/alerts/{alertId}
-         * @allow (delete) The owner deleting an alert for their own batch.
-         *        auth.uid: "user_abc", path: /users/user_abc/chickenBatches/batch1/alerts/alert1
-         * @deny (list) Another user trying to list alerts for someone else's batch.
-         *       auth.uid: "user_xyz", path: /users/user_abc/chickenBatches/batch1/alerts
-         * @principle Inherits ownership from the parent user document, securing nested data.
-         */
-        match /alerts/{alertId} {
-          allow get: if isOwner(userId);
-          allow list: if isOwner(userId);
-          allow create: if isOwner(userId);
-          allow update: if isOwner(userId) && isExistingDocument();
-          allow delete: if isOwner(userId) && isExistingDocument();
-        }
+      match /expenditures/{expenditureId} {
+        allow read, write: if isOwner(userId);
       }
     }
   }

@@ -11,10 +11,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { StatsCard } from '@/components/dashboard/stats-card';
-import { mockKpis, mockSensorData, mockFlocks } from '@/lib/data';
-import { Thermometer, Droplets, Wind, Wheat, TrendingUp, Users, HeartPulse, BrainCircuit, ArrowRight } from 'lucide-react';
+import { mockKpis, mockSensorData } from '@/lib/data';
+import { Thermometer, Wheat, TrendingUp, Users, HeartPulse, BrainCircuit, ArrowRight, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import type { Flock } from '@/lib/types';
 
 const flockGrowthData = [
   { name: 'Week 1', weight: 0.18 },
@@ -26,7 +29,22 @@ const flockGrowthData = [
 ];
 
 export default function DashboardPage() {
-  const totalChickens = mockFlocks.reduce((sum, flock) => sum + flock.count, 0);
+  const { firestore, user } = useFirebase();
+  const flocksRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(firestore, 'users', user.uid, 'flocks');
+  }, [firestore, user]);
+  const { data: flocks, isLoading } = useCollection<Flock>(flocksRef);
+  
+  const totalChickens = flocks?.reduce((sum, flock) => sum + flock.count, 0) || 0;
+
+  if (isLoading) {
+      return (
+        <div className="flex justify-center items-center h-96">
+            <Loader2 className="h-16 w-16 animate-spin"/>
+        </div>
+      )
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -53,7 +71,7 @@ export default function DashboardPage() {
           title="Total Flock Size"
           value={totalChickens.toLocaleString()}
           icon={<Users className="h-5 w-5" />}
-          description={`${mockFlocks.length} active flocks`}
+          description={`${flocks?.length || 0} active flocks`}
         />
       </div>
 

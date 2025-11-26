@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import {
   Table,
   TableBody,
@@ -22,22 +21,29 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Calendar as CalendarIcon } from 'lucide-react';
-import { mockFlocks, mockSales } from '@/lib/data';
-import type { Sale } from '@/lib/types';
-
-const saleSchema = z.object({
-  flockId: z.string().min(1, 'Please select a flock'),
-  quantity: z.coerce.number().min(1, 'Quantity must be at least 1'),
-  pricePerUnit: z.coerce.number().min(0.01, 'Price must be positive'),
-  customer: z.string().min(2, 'Customer name is required'),
-  saleDate: z.date(),
-});
-
+import { PlusCircle, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import type { Sale, Flock } from '@/lib/types';
+import { saleSchema } from '@/lib/types';
+import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { collection, Timestamp } from 'firebase/firestore';
+import { z } from 'zod';
 
 export default function SalesPage() {
-  const [sales, setSales] = useState<Sale[]>(mockSales);
   const { toast } = useToast();
+  const { firestore, user } = useFirebase();
+
+  const salesRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(firestore, 'users', user.uid, 'sales');
+  }, [firestore, user]);
+  const { data: sales, isLoading: isLoadingSales } = useCollection<Sale>(salesRef);
+
+  const flocksRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(firestore, 'users', user.uid, 'flocks');
+  }, [firestore, user]);
+  const { data: flocks, isLoading: isLoadingFlocks } = useCollection<Flock>(flocksRef);
+
 
   const form = useForm<z.infer<typeof saleSchema>>({
     resolver: zodResolver(saleSchema),
@@ -51,13 +57,16 @@ export default function SalesPage() {
   });
 
   function onSubmit(values: z.infer<typeof saleSchema>) {
+    if (!salesRef) return;
     const total = values.quantity * values.pricePerUnit;
-    const newSale: Sale = {
-      id: `SALE-${String(sales.length + 1).padStart(3, '0')}`,
+    const newSale = {
       ...values,
+      saleDate: Timestamp.fromDate(values.saleDate),
       total,
     };
-    setSales([newSale, ...sales]);
+
+    addDocumentNonBlocking(salesRef, newSale);
+
     toast({
       title: 'Sale Recorded',
       description: `Recorded sale of ${values.quantity} birds to ${values.customer} for $${total.toFixed(2)}.`,
@@ -84,14 +93,14 @@ export default function SalesPage() {
                       <FormLabel>Flock</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger disabled={isLoadingFlocks}>
                             <SelectValue placeholder="Select a flock" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {mockFlocks.map((flock) => (
+                          {flocks?.map((flock) => (
                             <SelectItem key={flock.id} value={flock.id}>
-                              {flock.id} - {flock.breed}
+                              {flock.breed} ({flock.id.substring(0,6)}...)
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -200,10 +209,24 @@ export default function SalesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sales.map((sale) => (
+                {isLoadingSales && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center">
+                      <Loader2 className="mx-auto h-8 w-8 animate-spin" />
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!isLoadingSales && sales?.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center">
+                      No sales recorded yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {sales?.map((sale) => (
                   <TableRow key={sale.id}>
-                    <TableCell>{format(sale.saleDate, 'yyyy-MM-dd')}</TableCell>
-                    <TableCell>{sale.flockId}</TableCell>
+                    <TableCell>{format(sale.saleDate.toDate(), 'yyyy-MM-dd')}</TableCell>
+                    <TableCell>{flocks?.find(f => f.id === sale.flockId)?.breed || sale.flockId.substring(0,6)}</TableCell>
                     <TableCell>{sale.customer}</TableCell>
                     <TableCell className="text-right">{sale.quantity}</TableCell>
                     <TableCell className="text-right">${sale.total.toFixed(2)}</TableCell>

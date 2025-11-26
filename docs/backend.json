@@ -1,191 +1,129 @@
 {
   "entities": {
-    "ChickenBatch": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ChickenBatch",
+    "Flock": {
+      "title": "Flock",
       "type": "object",
       "description": "Represents a batch of chickens with shared characteristics and lifecycle management.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the chicken batch."
+          "description": "Unique identifier for the flock."
         },
         "breed": {
           "type": "string",
-          "description": "The breed of chickens in this batch."
+          "description": "The breed of chickens in this flock."
         },
         "hatchDate": {
           "type": "string",
-          "description": "The date when the chicks in this batch hatched.",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "The date when the chicks in this flock hatched."
         },
-        "quantity": {
+        "count": {
           "type": "number",
-          "description": "The initial number of chicks in the batch."
+          "description": "The current number of chickens in the flock."
         },
-        "currentQuantity": {
+        "initialCount": {
           "type": "number",
-          "description": "The current number of chickens in the batch, accounting for sales, losses, etc."
+          "description": "The initial number of chicks in the flock."
         },
-        "housingId": {
-          "type": "string",
-          "description": "Reference to Housing where this batch is located. (Relationship: Housing 1:N ChickenBatch)"
+        "averageWeight": {
+          "type": "number",
+          "description": "The average weight of a chicken in the flock (in kg)."
         },
-        "feedTypeId": {
-          "type": "string",
-          "description": "Reference to FeedType used for this batch. (Relationship: FeedType 1:N ChickenBatch)"
+        "totalFeedConsumed": {
+          "type": "number",
+          "description": "The total amount of feed consumed by the flock (in kg)."
+        },
+        "totalCost": {
+          "type": "number",
+          "description": "The total cost associated with the flock."
         }
       },
       "required": [
         "id",
         "breed",
         "hatchDate",
-        "quantity",
-        "currentQuantity",
-        "housingId",
-        "feedTypeId"
+        "count",
+        "initialCount"
       ]
     },
-    "Housing": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Housing",
+    "Sale": {
+      "title": "Sale",
       "type": "object",
-      "description": "Represents a physical structure or area where chickens are housed.",
+      "description": "Represents a sales transaction.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the housing unit."
+          "description": "Unique identifier for the sale."
         },
-        "name": {
+        "flockId": {
           "type": "string",
-          "description": "A descriptive name for the housing unit (e.g., Coop 1, Barn A)."
+          "description": "Reference to the Flock being sold."
         },
-        "capacity": {
+        "quantity": {
           "type": "number",
-          "description": "The maximum number of chickens that can be housed in this unit."
+          "description": "Number of chickens sold."
         },
-        "type": {
-          "type": "string",
-          "description": "The type of housing (e.g., coop, barn, free-range area)."
+        "pricePerUnit": {
+          "type": "number",
+          "description": "Price per chicken."
         },
-        "temperatureSensorId": {
+        "customer": {
           "type": "string",
-          "description": "Reference to TemperatureSensor associated with this Housing. (Relationship: TemperatureSensor 1:1 Housing)"
+          "description": "Name of the customer."
+        },
+        "saleDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date of the sale."
+        },
+        "total": {
+          "type": "number",
+          "description": "Total amount of the sale."
         }
       },
       "required": [
         "id",
-        "name",
-        "capacity",
-        "type",
-        "temperatureSensorId"
+        "flockId",
+        "quantity",
+        "pricePerUnit",
+        "customer",
+        "saleDate",
+        "total"
       ]
     },
-    "FeedType": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "FeedType",
+    "Expenditure": {
+      "title": "Expenditure",
       "type": "object",
-      "description": "Represents different types of feed used for the chickens.",
+      "description": "Represents a farm expenditure.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the feed type."
+          "description": "Unique identifier for the expenditure."
         },
-        "name": {
+        "category": {
           "type": "string",
-          "description": "The name of the feed type (e.g., Starter, Grower, Finisher)."
+          "description": "Category of the expense."
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount of the expense."
         },
         "description": {
           "type": "string",
-          "description": "A description of the feed type, including its composition and intended use."
+          "description": "Description of the expense."
         },
-        "nutrientProfile": {
+        "expenditureDate": {
           "type": "string",
-          "description": "JSON string that shows the nutrient information about this feed"
+          "format": "date-time",
+          "description": "The date of the expenditure."
         }
       },
       "required": [
         "id",
-        "name",
-        "description",
-        "nutrientProfile"
-      ]
-    },
-    "TemperatureSensor": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "TemperatureSensor",
-      "type": "object",
-      "description": "Represents a temperature sensor that collects data within a housing unit.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the temperature sensor."
-        },
-        "sensorName": {
-          "type": "string",
-          "description": "A descriptive name for the sensor (e.g., Coop 1 - Sensor A)."
-        },
-        "lastReading": {
-          "type": "number",
-          "description": "The most recent temperature reading from the sensor (in Celsius)."
-        },
-        "lastReadingTimestamp": {
-          "type": "string",
-          "description": "The timestamp of the last temperature reading.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "sensorName",
-        "lastReading",
-        "lastReadingTimestamp"
-      ]
-    },
-    "Alert": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Alert",
-      "type": "object",
-      "description": "Represents an alert generated by the system based on predefined rules or AI predictions.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the alert."
-        },
-        "batchId": {
-          "type": "string",
-          "description": "Reference to ChickenBatch that triggered this alert. (Relationship: ChickenBatch 1:N Alert)"
-        },
-        "type": {
-          "type": "string",
-          "description": "The type of alert (e.g., TemperatureHigh, FeedConsumptionLow, PredictedDisease)."
-        },
-        "severity": {
-          "type": "string",
-          "description": "The severity of the alert (e.g., Low, Medium, High)."
-        },
-        "message": {
-          "type": "string",
-          "description": "A detailed message describing the alert and its potential impact."
-        },
-        "timestamp": {
-          "type": "string",
-          "description": "The timestamp when the alert was generated.",
-          "format": "date-time"
-        },
-        "isResolved": {
-          "type": "boolean",
-          "description": "Indicates whether the alert has been resolved."
-        }
-      },
-      "required": [
-        "id",
-        "batchId",
-        "type",
-        "severity",
-        "message",
-        "timestamp",
-        "isResolved"
+        "category",
+        "amount",
+        "expenditureDate"
       ]
     },
     "User": {
@@ -250,110 +188,65 @@
         }
       },
       {
-        "path": "/users/{userId}/housing/{housingId}",
+        "path": "/users/{userId}/flocks/{flockId}",
         "definition": {
-          "entityName": "Housing",
+          "entityName": "Flock",
           "schema": {
-            "$ref": "#/backend/entities/Housing"
+            "$ref": "#/backend/entities/Flock"
           },
-          "description": "Stores housing information owned by the user.",
+          "description": "Stores flock information owned by the user.",
           "params": [
             {
               "name": "userId",
               "description": "The unique ID of the user."
             },
             {
-              "name": "housingId",
-              "description": "The unique ID of the housing."
+              "name": "flockId",
+              "description": "The unique ID of the flock."
             }
           ]
         }
       },
       {
-        "path": "/users/{userId}/feedTypes/{feedTypeId}",
+        "path": "/users/{userId}/sales/{saleId}",
         "definition": {
-          "entityName": "FeedType",
+          "entityName": "Sale",
           "schema": {
-            "$ref": "#/backend/entities/FeedType"
+            "$ref": "#/backend/entities/Sale"
           },
-          "description": "Stores feed types owned by the user.",
+          "description": "Stores sales information owned by the user.",
           "params": [
             {
               "name": "userId",
               "description": "The unique ID of the user."
             },
             {
-              "name": "feedTypeId",
-              "description": "The unique ID of the feed type."
+              "name": "saleId",
+              "description": "The unique ID of the sale."
             }
           ]
         }
       },
       {
-        "path": "/users/{userId}/temperatureSensors/{temperatureSensorId}",
+        "path": "/users/{userId}/expenditures/{expenditureId}",
         "definition": {
-          "entityName": "TemperatureSensor",
+          "entityName": "Expenditure",
           "schema": {
-            "$ref": "#/backend/entities/TemperatureSensor"
+            "$ref": "#/backend/entities/Expenditure"
           },
-          "description": "Stores temperature sensors owned by the user.",
+          "description": "Stores expenditure information owned by the user.",
           "params": [
             {
               "name": "userId",
               "description": "The unique ID of the user."
             },
             {
-              "name": "temperatureSensorId",
-              "description": "The unique ID of the temperature sensor."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/chickenBatches/{chickenBatchId}",
-        "definition": {
-          "entityName": "ChickenBatch",
-          "schema": {
-            "$ref": "#/backend/entities/ChickenBatch"
-          },
-          "description": "Stores chicken batch information owned by the user. Includes denormalized 'ownerId' field for authorization independence.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user."
-            },
-            {
-              "name": "chickenBatchId",
-              "description": "The unique ID of the chicken batch."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/chickenBatches/{chickenBatchId}/alerts/{alertId}",
-        "definition": {
-          "entityName": "Alert",
-          "schema": {
-            "$ref": "#/backend/entities/Alert"
-          },
-          "description": "Stores alerts related to a chicken batch, owned by the user. Includes denormalized 'ownerId' (inherited from ChickenBatch) field for authorization independence.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user."
-            },
-            {
-              "name": "chickenBatchId",
-              "description": "The unique ID of the chicken batch."
-            },
-            {
-              "name": "alertId",
-              "description": "The unique ID of the alert."
+              "name": "expenditureId",
+              "description": "The unique ID of the expenditure."
             }
           ]
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to support CluckHub's core features while adhering to the principles of Authorization Independence, Clarity of Intent, DBAC, and QAPs. The structure leverages path-based ownership for user-specific data and membership maps for collaborative data. Denormalization is extensively used to avoid `get()` calls in security rules, thus ensuring atomic operations and easier debugging. Segregation ensures that each collection has a homogeneous security posture, which simplifies security rule definition and prevents unintended access.\n\nSpecifically, user-owned data such as Housing, FeedType, and TemperatureSensor are placed under `/users/{userId}` to ensure that only the owning user has access. ChickenBatches are similarly organized under the user's path. Alerts, which are related to ChickenBatches, inherit this ownership through their location within the user's subcollection. The structure facilitates secure `list` operations because all documents in a collection share the same security requirements enforced by path-based rules.\n\nAuthorization Independence is achieved by including a `ownerId` field in the ChickenBatch and Alert entities, which duplicates the user ID owning these documents. This allows security rules to validate ownership without needing to perform a `get()` on a parent document. This is especially critical for atomicity during creation. The membership map strategy (not explicitly used here due to lack of collaborative entities) would involve denormalizing user roles into documents needing collaborative access, avoiding dependency on custom claims.\n\nThe DBAC principle is enforced by storing the user role directly in the User document. This avoids the need for custom claims. Instead, roles are read directly from the database during authorization.\n\nQAPs are achieved via the data structure; listing of `chickenBatches` can be limited via rules ensuring `request.auth.uid == chickenBatches.ownerId`"
+    ]
   }
 }
