@@ -13,6 +13,17 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+  } from "@/components/ui/alert-dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -21,10 +32,10 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import { PlusCircle, Calendar as CalendarIcon, Loader2, Trash2 } from 'lucide-react';
 import type { Sale, Flock } from '@/lib/types';
 import { saleSchema } from '@/lib/types';
-import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, Timestamp, doc } from 'firebase/firestore';
 import { z } from 'zod';
 
@@ -102,6 +113,17 @@ export default function SalesPage() {
     form.reset();
   }
 
+  function handleDeleteSale(saleId: string) {
+    if (!user) return;
+    const saleDocRef = doc(firestore, 'users', user.uid, 'sales', saleId);
+    deleteDocumentNonBlocking(saleDocRef);
+    toast({
+      title: "Sale Deleted",
+      description: "The sale record has been deleted. Note: this does not add birds back to the flock.",
+      variant: "destructive"
+    });
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
       <div className="lg:col-span-1">
@@ -127,7 +149,7 @@ export default function SalesPage() {
                         </FormControl>
                         <SelectContent>
                           {flocks?.map((flock) => (
-                            <SelectItem key={flock.id} value={flock.id}>
+                            <SelectItem key={flock.id} value={flock.id} disabled={flock.count === 0}>
                               {flock.breed} ({flock.count} birds)
                             </SelectItem>
                           ))}
@@ -210,7 +232,7 @@ export default function SalesPage() {
                 />
               </CardContent>
               <CardFooter>
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full" disabled={isLoadingFlocks}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Record Sale
                 </Button>
@@ -234,19 +256,20 @@ export default function SalesPage() {
                   <TableHead>Customer</TableHead>
                   <TableHead className="text-right">Quantity</TableHead>
                   <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoadingSales && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={6} className="text-center">
                       <Loader2 className="mx-auto h-8 w-8 animate-spin" />
                     </TableCell>
                   </TableRow>
                 )}
                 {!isLoadingSales && sales?.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={6} className="text-center">
                       No sales recorded yet.
                     </TableCell>
                   </TableRow>
@@ -258,6 +281,30 @@ export default function SalesPage() {
                     <TableCell>{sale.customer}</TableCell>
                     <TableCell className="text-right">{sale.quantity}</TableCell>
                     <TableCell className="text-right">${sale.total.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete this sale record.
+                                    This will NOT add the sold birds back to the flock.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteSale(sale.id)}>
+                                    Delete
+                                </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

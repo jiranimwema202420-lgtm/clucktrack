@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, MinusCircle, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import { PlusCircle, MinusCircle, Calendar as CalendarIcon, Loader2, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -33,6 +33,17 @@ import {
   DialogFooter,
   DialogClose
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import {
   Form,
   FormControl,
@@ -55,7 +66,7 @@ import { cn } from '@/lib/utils';
 import { format, differenceInWeeks } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Flock } from '@/lib/types';
-import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, Timestamp, doc } from 'firebase/firestore';
 
 
@@ -136,10 +147,21 @@ export default function InventoryPage() {
 
     toast({
         title: "Loss Recorded",
-        description: `Recorded a loss of ${values.count} in flock ${flock?.id} (${flock?.breed}).`
+        description: `Recorded a loss of ${values.count} in flock ${flock?.id.substring(0,6)}.`,
     })
     recordLossForm.reset();
     setRecordLossOpen(false);
+  }
+  
+  function handleDeleteFlock(flockId: string) {
+    if (!user) return;
+    const flockDocRef = doc(firestore, 'users', user.uid, 'flocks', flockId);
+    deleteDocumentNonBlocking(flockDocRef);
+    toast({
+      title: "Flock Deleted",
+      description: `Flock has been removed from the inventory.`,
+      variant: "destructive"
+    })
   }
 
   const getAgeInWeeks = (hatchDate: Timestamp) => {
@@ -341,19 +363,20 @@ export default function InventoryPage() {
               <TableHead className="text-right">Avg. Wt (kg)</TableHead>
               <TableHead className="text-right">FCR</TableHead>
               <TableHead className="text-right">Cost/Bird</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center">
+                <TableCell colSpan={8} className="text-center">
                   <Loader2 className="mx-auto h-8 w-8 animate-spin" />
                 </TableCell>
               </TableRow>
             )}
             {!isLoading && flocks?.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center">
+                <TableCell colSpan={8} className="text-center">
                   No flocks found. Add some chicks to get started.
                 </TableCell>
               </TableRow>
@@ -369,6 +392,30 @@ export default function InventoryPage() {
                 <TableCell className="text-right">{flock.averageWeight.toFixed(2)}</TableCell>
                 <TableCell className="text-right">{calculateFCR(flock)}</TableCell>
                 <TableCell className="text-right">{calculateCostPerBird(flock)}</TableCell>
+                <TableCell className="text-right">
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the flock
+                                and all of its associated data.
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDeleteFlock(flock.id)}>
+                                Delete
+                            </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
