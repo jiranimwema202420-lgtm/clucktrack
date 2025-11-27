@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -42,10 +42,23 @@ const formSchema = z.object({
   }),
 });
 
+const LOCAL_STORAGE_KEY = 'feedOptimizationResult';
+
 export default function FeedOptimizationPage() {
   const [result, setResult] = useState<OptimizeFeedMixOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    try {
+      const savedResult = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedResult) {
+        setResult(JSON.parse(savedResult));
+      }
+    } catch (error) {
+      console.error("Failed to parse feed optimization result from localStorage", error);
+    }
+  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -63,6 +76,7 @@ export default function FeedOptimizationPage() {
     try {
       const optimizationResult = await optimizeFeedMix(values);
       setResult(optimizationResult);
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(optimizationResult));
     } catch (error) {
       console.error('Error optimizing feed mix:', error);
       toast({

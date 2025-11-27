@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -37,10 +37,23 @@ const formSchema = z.object({
   }),
 });
 
+const LOCAL_STORAGE_KEY = 'healthPredictionResult';
+
 export default function HealthPredictionPage() {
   const [result, setResult] = useState<PredictHealthIssuesOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    try {
+      const savedResult = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedResult) {
+        setResult(JSON.parse(savedResult));
+      }
+    } catch (error) {
+        console.error("Failed to parse health prediction result from localStorage", error);
+    }
+  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -56,6 +69,7 @@ export default function HealthPredictionPage() {
     try {
       const predictionResult = await predictHealthIssues(values);
       setResult(predictionResult);
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(predictionResult));
     } catch (error) {
       console.error('Error predicting health issues:', error);
       toast({
