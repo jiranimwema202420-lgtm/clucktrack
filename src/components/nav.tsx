@@ -10,7 +10,8 @@ import {
   HeartPulse,
   DollarSign,
   ShoppingCart,
-  FileOutput
+  FileOutput,
+  MessageSquare
 } from 'lucide-react';
 import {
   SidebarHeader,
@@ -30,6 +31,7 @@ const navItems = [
   { href: '/reports', label: 'Reports', icon: BarChart3 },
   { href: '/feed-optimization', label: 'Feed AI', icon: BrainCircuit },
   { href: '/health-prediction', label: 'Health AI', icon: HeartPulse },
+  { href: '/poultry-qa', label: 'Poultry Q&amp;A', icon: MessageSquare },
 ];
 
 export default function Nav() {

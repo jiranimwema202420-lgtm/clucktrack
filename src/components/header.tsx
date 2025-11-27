@@ -27,6 +27,7 @@ const pathToTitle: { [key: string]: string } = {
   '/financials': 'Financials',
   '/feed-optimization': 'AI Feed Optimizer',
   '/health-prediction': 'AI Health Predictor',
+  '/poultry-qa': 'Poultry Q&amp;A',
 };
 
 export default function Header() {
