@@ -47,10 +47,6 @@
       "type": "object",
       "description": "Represents a sales transaction.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the sale."
-        },
         "flockId": {
           "type": "string",
           "description": "Reference to the Flock being sold."
@@ -78,7 +74,6 @@
         }
       },
       "required": [
-        "id",
         "flockId",
         "quantity",
         "pricePerUnit",
@@ -92,10 +87,6 @@
       "type": "object",
       "description": "Represents a farm expenditure.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the expenditure."
-        },
         "category": {
           "type": "string",
           "description": "Category of the expense."
@@ -110,11 +101,11 @@
         },
         "amount": {
           "type": "number",
-          "description": "Amount of the expense."
+          "description": "Total amount of the expense, calculated from quantity and unit price."
         },
         "description": {
           "type": "string",
-          "description": "Description of the expense."
+          "description": "A brief description of the expense."
         },
         "expenditureDate": {
           "type": "string",
@@ -123,7 +114,6 @@
         }
       },
       "required": [
-        "id",
         "category",
         "quantity",
         "unitPrice",
@@ -161,10 +151,7 @@
       },
       "required": [
         "id",
-        "firstName",
-        "lastName",
-        "email",
-        "role"
+        "email"
       ]
     }
   },
