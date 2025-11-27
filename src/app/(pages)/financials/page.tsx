@@ -81,7 +81,7 @@ export default function FinancialsPage() {
           value={`$${netProfit.toLocaleString()}`}
           icon={<DollarSign className="h-5 w-5" />}
           description="Revenue minus expenditures"
-          className={netProfit > 0 ? 'bg-green-100 dark:bg-green-900/50' : 'bg-red-100 dark:bg-red-900/50'}
+          className={netProfit >= 0 ? 'bg-green-100 dark:bg-green-900/50' : 'bg-red-100 dark:bg-red-900/50'}
         />
       </div>
 

@@ -12,12 +12,13 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { mockSensorData } from '@/lib/data';
-import { Thermometer, Wheat, TrendingUp, Users, HeartPulse, BrainCircuit, ArrowRight, Loader2 } from 'lucide-react';
+import { Thermometer, Wheat, TrendingUp, Users, HeartPulse, BrainCircuit, ArrowRight, Loader2, TrendingDown } from 'lucide-react';
 import Link from 'next/link';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Flock } from '@/lib/types';
+import { differenceInWeeks } from 'date-fns';
 
 const flockGrowthData = [
   { name: 'Week 1', weight: 0.18 },
@@ -37,15 +38,20 @@ export default function DashboardPage() {
   const { data: flocks, isLoading } = useCollection<Flock>(flocksRef);
   
   const totalChickens = flocks?.reduce((sum, flock) => sum + flock.count, 0) || 0;
-  const totalCost = flocks?.reduce((sum, flock) => sum + flock.totalCost, 0) || 0;
-  const avgFCR = (flocks && flocks.length > 0) ? (flocks.reduce((sum, flock) => {
-    const totalWeight = flock.count * flock.averageWeight;
-    if (totalWeight > 0 && flock.totalFeedConsumed > 0) {
-      return sum + (flock.totalFeedConsumed / totalWeight);
+  
+  const fcrData = flocks?.map(flock => {
+    const totalWeightGain = flock.count * flock.averageWeight;
+    if (flock.totalFeedConsumed > 0 && totalWeightGain > 0) {
+      return flock.totalFeedConsumed / totalWeightGain;
     }
-    return sum;
-  }, 0) / flocks.filter(f => f.totalFeedConsumed > 0).length).toFixed(2) : 'N/A';
-  const mortalityRate = (flocks && flocks.length > 0) ? ((flocks.reduce((sum, flock) => sum + (flock.initialCount - flock.count), 0) / flocks.reduce((sum, flock) => sum + flock.initialCount, 0)) * 100).toFixed(2) : 0;
+    return null;
+  }).filter(fcr => fcr !== null) as number[];
+
+  const avgFCR = fcrData.length > 0 ? (fcrData.reduce((a, b) => a + b, 0) / fcrData.length).toFixed(2) : 'N/A';
+
+  const initialCount = flocks?.reduce((sum, flock) => sum + flock.initialCount, 0) || 0;
+  const currentCount = flocks?.reduce((sum, flock) => sum + flock.count, 0) || 0;
+  const mortalityRate = initialCount > 0 ? (((initialCount - currentCount) / initialCount) * 100).toFixed(2) : '0.00';
 
 
   if (isLoading) {
@@ -74,7 +80,7 @@ export default function DashboardPage() {
         <StatsCard
           title="Mortality Rate"
           value={`${mortalityRate}%`}
-          icon={<TrendingUp className="h-5 w-5" />}
+          icon={<TrendingDown className="h-5 w-5" />}
           description="Across all flocks"
         />
         <Link href="/inventory">
