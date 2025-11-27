@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { StatsCard } from '@/components/dashboard/stats-card';
-import { mockKpis, mockSensorData } from '@/lib/data';
+import { mockSensorData } from '@/lib/data';
 import { Thermometer, Wheat, TrendingUp, Users, HeartPulse, BrainCircuit, ArrowRight, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
@@ -37,6 +37,16 @@ export default function DashboardPage() {
   const { data: flocks, isLoading } = useCollection<Flock>(flocksRef);
   
   const totalChickens = flocks?.reduce((sum, flock) => sum + flock.count, 0) || 0;
+  const totalCost = flocks?.reduce((sum, flock) => sum + flock.totalCost, 0) || 0;
+  const avgFCR = (flocks && flocks.length > 0) ? (flocks.reduce((sum, flock) => {
+    const totalWeight = flock.count * flock.averageWeight;
+    if (totalWeight > 0 && flock.totalFeedConsumed > 0) {
+      return sum + (flock.totalFeedConsumed / totalWeight);
+    }
+    return sum;
+  }, 0) / flocks.filter(f => f.totalFeedConsumed > 0).length).toFixed(2) : 'N/A';
+  const mortalityRate = (flocks && flocks.length > 0) ? ((flocks.reduce((sum, flock) => sum + (flock.initialCount - flock.count), 0) / flocks.reduce((sum, flock) => sum + flock.initialCount, 0)) * 100).toFixed(2) : 0;
+
 
   if (isLoading) {
       return (
@@ -57,22 +67,24 @@ export default function DashboardPage() {
         />
         <StatsCard
           title="Feed Conversion"
-          value={mockKpis.feedConversionRatio}
+          value={avgFCR}
           icon={<Wheat className="h-5 w-5" />}
           description="Lower is better"
         />
         <StatsCard
           title="Mortality Rate"
-          value={`${mockKpis.mortalityRate}%`}
+          value={`${mortalityRate}%`}
           icon={<TrendingUp className="h-5 w-5" />}
-          description="Last 30 days"
+          description="Across all flocks"
         />
-        <StatsCard
-          title="Total Flock Size"
-          value={totalChickens.toLocaleString()}
-          icon={<Users className="h-5 w-5" />}
-          description={`${flocks?.length || 0} active flocks`}
-        />
+        <Link href="/inventory">
+            <StatsCard
+              title="Total Flock Size"
+              value={totalChickens.toLocaleString()}
+              icon={<Users className="h-5 w-5" />}
+              description={`${flocks?.length || 0} active flocks`}
+            />
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
