@@ -14,9 +14,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { ChevronsUpDown, LogIn, LogOut, Settings } from 'lucide-react';
-import { useFirebase } from '@/firebase/provider';
+import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { doc } from 'firebase/firestore';
+import type { UserProfile } from '@/lib/types';
+
 
 const pathToTitle: { [key: string]: string } = {
   '/dashboard': 'Dashboard',
@@ -35,8 +38,14 @@ export default function Header() {
   const pathname = usePathname();
   const avatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
   const pageTitle = pathToTitle[pathname] || 'CluckHub';
-  const { user, auth } = useFirebase();
+  const { user, auth, firestore } = useFirebase();
   const { toast } = useToast();
+
+  const userProfileRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
   const handleLogout = () => {
     if (auth) {
@@ -61,11 +70,11 @@ export default function Header() {
               <Button variant="ghost" className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
                   {avatar && <AvatarImage src={user.photoURL || avatar.imageUrl} alt="User Avatar" />}
-                  <AvatarFallback>{user.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+                  <AvatarFallback>{user.displayName?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
                 </Avatar>
                 <div className="hidden flex-col items-start md:flex">
-                  <span className="font-medium">{user.email || 'Anonymous User'}</span>
-                  <span className="text-xs text-muted-foreground">{user.isAnonymous ? 'Anonymous' : 'Member'}</span>
+                  <span className="font-medium">{user.displayName || user.email || 'Anonymous User'}</span>
+                  <span className="text-xs text-muted-foreground">{userProfile?.farmName || (user.isAnonymous ? 'Anonymous' : 'Member')}</span>
                 </div>
                 <ChevronsUpDown className="ml-2 h-4 w-4 text-muted-foreground" />
               </Button>

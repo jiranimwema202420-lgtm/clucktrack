@@ -10,6 +10,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter
 } from '@/components/ui/card';
 import {
   Form,
@@ -22,11 +23,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { useTheme } from 'next-themes';
 import { Moon, Sun } from 'lucide-react';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { initiateEmailSignIn, initiateEmailSignUp } from '@/firebase/non-blocking-login';
 import { updateProfile } from 'firebase/auth';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { doc } from 'firebase/firestore';
+import type { UserProfile } from '@/lib/types';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -37,12 +40,24 @@ const profileSchema = z.object({
     displayName: z.string().min(2, "Display name must be at least 2 characters.").optional().or(z.literal('')),
 });
 
+const farmDetailsSchema = z.object({
+    farmName: z.string().min(2, "Farm name must be at least 2 characters.").optional().or(z.literal('')),
+    farmLocation: z.string().min(2, "Farm location must be at least 2 characters.").optional().or(z.literal('')),
+    farmContact: z.string().min(10, "Contact must be at least 10 characters.").optional().or(z.literal('')),
+});
+
 
 export default function SettingsPage() {
   const { setTheme, theme } = useTheme();
-  const { user, auth } = useFirebase();
+  const { user, auth, firestore } = useFirebase();
   const { toast } = useToast();
   const [isRegistering, setIsRegistering] = useState(false);
+
+  const userProfileRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -51,8 +66,31 @@ export default function SettingsPage() {
 
   const profileForm = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { displayName: user?.displayName || '' },
+    values: { displayName: user?.displayName || '' },
   });
+
+  const farmDetailsForm = useForm<z.infer<typeof farmDetailsSchema>>({
+    resolver: zodResolver(farmDetailsSchema),
+    values: {
+        farmName: userProfile?.farmName || '',
+        farmLocation: userProfile?.farmLocation || '',
+        farmContact: userProfile?.farmContact || '',
+    },
+  });
+
+  useEffect(() => {
+    if (user) {
+      profileForm.reset({ displayName: user.displayName || '' });
+    }
+    if (userProfile) {
+        farmDetailsForm.reset({
+            farmName: userProfile.farmName || '',
+            farmLocation: userProfile.farmLocation || '',
+            farmContact: userProfile.farmContact || '',
+        });
+    }
+  }, [user, userProfile, profileForm, farmDetailsForm]);
+
 
   async function onLoginSubmit(values: z.infer<typeof loginSchema>) {
     if (!auth) return;
@@ -73,7 +111,20 @@ export default function SettingsPage() {
     if (!user) return;
     try {
         await updateProfile(user, { displayName: values.displayName });
+        if (userProfileRef) {
+            setDocumentNonBlocking(userProfileRef, { displayName: values.displayName }, { merge: true });
+        }
         toast({ title: 'Profile Updated', description: 'Your display name has been updated.' });
+    } catch(error: any) {
+        toast({ variant: 'destructive', title: 'Update Failed', description: error.message });
+    }
+  }
+
+  async function onFarmDetailsSubmit(values: z.infer<typeof farmDetailsSchema>) {
+    if (!userProfileRef) return;
+    try {
+        setDocumentNonBlocking(userProfileRef, values, { merge: true });
+        toast({ title: 'Farm Details Updated', description: 'Your farm information has been saved.' });
     } catch(error: any) {
         toast({ variant: 'destructive', title: 'Update Failed', description: error.message });
     }
@@ -109,32 +160,87 @@ export default function SettingsPage() {
       </Card>
       
       { user ? (
-        <Card>
-            <CardHeader>
-            <CardTitle>Profile</CardTitle>
-            <CardDescription>Manage your account details.</CardDescription>
-            </CardHeader>
-            <CardContent>
-            <Form {...profileForm}>
-                <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
-                <FormField
-                    control={profileForm.control}
-                    name="displayName"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Display Name</FormLabel>
-                        <FormControl>
-                        <Input placeholder="Your Name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <Button type="submit">Save Changes</Button>
-                </form>
-            </Form>
-            </CardContent>
-        </Card>
+        <>
+            <Card>
+                <CardHeader>
+                <CardTitle>Profile</CardTitle>
+                <CardDescription>Manage your personal account details.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                <Form {...profileForm}>
+                    <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
+                    <FormField
+                        control={profileForm.control}
+                        name="displayName"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Display Name</FormLabel>
+                            <FormControl>
+                            <Input placeholder="Your Name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <Button type="submit">Save Changes</Button>
+                    </form>
+                </Form>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                <CardTitle>Farm Details</CardTitle>
+                <CardDescription>Manage your farm's information.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                <Form {...farmDetailsForm}>
+                    <form onSubmit={farmDetailsForm.handleSubmit(onFarmDetailsSubmit)} className="space-y-4">
+                    <FormField
+                        control={farmDetailsForm.control}
+                        name="farmName"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Farm Name</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g., CluckHub Farms" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={farmDetailsForm.control}
+                        name="farmLocation"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Farm Location</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g., Nairobi, Kenya" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={farmDetailsForm.control}
+                        name="farmContact"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Contact Number</FormLabel>
+                            <FormControl>
+                            <Input type="tel" placeholder="e.g., +254 712 345 678" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <Button type="submit">Save Farm Details</Button>
+                    </form>
+                </Form>
+                </CardContent>
+            </Card>
+        </>
       ) : (
         <Card>
             <CardHeader>

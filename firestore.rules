@@ -44,7 +44,7 @@ service cloud.firestore {
       allow get: if isOwner(userId);
       allow list: if false;
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isOwner(userId) && isExistingDocument() && request.resource.data.id == resource.data.id;
+      allow update: if isOwner(userId) && isExistingDocument();
       allow delete: if isOwner(userId) && isExistingDocument();
 
       match /flocks/{flockId} {

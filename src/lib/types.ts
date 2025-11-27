@@ -70,3 +70,12 @@ export interface ReportData {
     fcr: number;
     avgWeight: number;
 }
+
+export interface UserProfile {
+  id: string;
+  displayName?: string;
+  email: string;
+  farmName?: string;
+  farmLocation?: string;
+  farmContact?: string;
+}
