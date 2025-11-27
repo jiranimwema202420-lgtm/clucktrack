@@ -11,7 +11,8 @@ import {
   DollarSign,
   ShoppingCart,
   FileOutput,
-  MessageSquare
+  MessageSquare,
+  Settings
 } from 'lucide-react';
 import {
   SidebarHeader,
@@ -31,7 +32,8 @@ const navItems = [
   { href: '/reports', label: 'Reports', icon: BarChart3 },
   { href: '/feed-optimization', label: 'Feed AI', icon: BrainCircuit },
   { href: '/health-prediction', label: 'Health AI', icon: HeartPulse },
-  { href: '/poultry-qa', label: 'Poultry Q&amp;A', icon: MessageSquare },
+  { href: '/poultry-qa', label: 'Poultry Q&A', icon: MessageSquare },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export default function Nav() {

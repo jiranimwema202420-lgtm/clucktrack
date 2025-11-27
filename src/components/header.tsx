@@ -13,10 +13,10 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { ChevronsUpDown, User, UserCog, UserCheck, LogIn, LogOut } from 'lucide-react';
+import { ChevronsUpDown, LogIn, LogOut, Settings } from 'lucide-react';
 import { useFirebase } from '@/firebase/provider';
-import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
-import { getAuth } from 'firebase/auth';
+import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 
 const pathToTitle: { [key: string]: string } = {
   '/dashboard': 'Dashboard',
@@ -27,7 +27,8 @@ const pathToTitle: { [key: string]: string } = {
   '/financials': 'Financials',
   '/feed-optimization': 'AI Feed Optimizer',
   '/health-prediction': 'AI Health Predictor',
-  '/poultry-qa': 'Poultry Q&amp;A',
+  '/poultry-qa': 'Poultry Q&A',
+  '/settings': 'Settings'
 };
 
 export default function Header() {
@@ -35,16 +36,15 @@ export default function Header() {
   const avatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
   const pageTitle = pathToTitle[pathname] || 'CluckHub';
   const { user, auth } = useFirebase();
-
-  const handleLogin = () => {
-    if (auth) {
-      initiateAnonymousSignIn(auth);
-    }
-  };
+  const { toast } = useToast();
 
   const handleLogout = () => {
     if (auth) {
       auth.signOut();
+      toast({
+        title: "Signed Out",
+        description: "You have been successfully signed out.",
+      })
     }
   };
 
@@ -60,12 +60,12 @@ export default function Header() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
-                  {avatar && <AvatarImage src={avatar.imageUrl} alt="User Avatar" />}
-                  <AvatarFallback>JD</AvatarFallback>
+                  {avatar && <AvatarImage src={user.photoURL || avatar.imageUrl} alt="User Avatar" />}
+                  <AvatarFallback>{user.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
                 </Avatar>
                 <div className="hidden flex-col items-start md:flex">
-                  <span className="font-medium">Guest User</span>
-                  <span className="text-xs text-muted-foreground">Anonymous</span>
+                  <span className="font-medium">{user.email || 'Anonymous User'}</span>
+                  <span className="text-xs text-muted-foreground">{user.isAnonymous ? 'Anonymous' : 'Member'}</span>
                 </div>
                 <ChevronsUpDown className="ml-2 h-4 w-4 text-muted-foreground" />
               </Button>
@@ -73,6 +73,12 @@ export default function Header() {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
+               <Link href="/settings">
+                <DropdownMenuItem>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+              </Link>
               <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Logout</span>
@@ -80,9 +86,11 @@ export default function Header() {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <Button onClick={handleLogin}>
-            <LogIn className="mr-2 h-4 w-4"/>
-            Sign In
+          <Button asChild>
+            <Link href="/settings">
+                <LogIn className="mr-2 h-4 w-4"/>
+                Sign In
+            </Link>
           </Button>
         )}
 
