@@ -45,9 +45,9 @@ export default function DashboardPage() {
       return flock.totalFeedConsumed / totalWeightGain;
     }
     return null;
-  }).filter(fcr => fcr !== null) as number[];
+  }).filter(fcr => fcr !== null) as number[] | undefined;
 
-  const avgFCR = fcrData.length > 0 ? (fcrData.reduce((a, b) => a + b, 0) / fcrData.length).toFixed(2) : 'N/A';
+  const avgFCR = fcrData && fcrData.length > 0 ? (fcrData.reduce((a, b) => a + b, 0) / fcrData.length).toFixed(2) : 'N/A';
 
   const initialCount = flocks?.reduce((sum, flock) => sum + flock.initialCount, 0) || 0;
   const currentCount = flocks?.reduce((sum, flock) => sum + flock.count, 0) || 0;
