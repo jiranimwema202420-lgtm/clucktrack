@@ -54,10 +54,10 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameT
             </div>
             {payload.map((p, i) => (
                 <div key={i} className="flex flex-col space-y-1">
-                    <span className="text-[0.70rem] uppercase text-muted-foreground" style={{color: p.color}}>
+                    <span className="text-[0.70rem] uppercase text-muted-foreground" style={{color: p.color || (chartConfig as any)[p.dataKey as string]?.color}}>
                         {p.name}
                     </span>
-                    <span className="font-bold" style={{color: p.color}}>
+                    <span className="font-bold" style={{color: p.color || (chartConfig as any)[p.dataKey as string]?.color}}>
                         {p.value}{p.name === 'Mortality' ? '%' : p.name === 'Avg. Weight' ? ' kg' : ''}
                     </span>
                 </div>
