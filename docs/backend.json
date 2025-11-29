@@ -1,5 +1,42 @@
 {
   "entities": {
+    "User": {
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the CluckHub system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The display name of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the user.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user (e.g., admin, worker, vet)."
+        },
+        "farmName": {
+          "type": "string",
+          "description": "The name of the user's farm."
+        },
+        "farmLocation": {
+          "type": "string",
+          "description": "The location of the user's farm."
+        },
+        "farmContact": {
+          "type": "string",
+          "description": "The contact number for the user's farm."
+        }
+      },
+      "required": ["id", "email"]
+    },
     "Flock": {
       "title": "Flock",
       "type": "object",
@@ -35,12 +72,7 @@
           "description": "The total cost associated with the flock."
         }
       },
-      "required": [
-        "breed",
-        "hatchDate",
-        "count",
-        "initialCount"
-      ]
+      "required": ["breed", "hatchDate", "count", "initialCount"]
     },
     "Sale": {
       "title": "Sale",
@@ -120,47 +152,6 @@
         "amount",
         "expenditureDate"
       ]
-    },
-    "User": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "User",
-      "type": "object",
-      "description": "Represents a user of the CluckHub system.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the user."
-        },
-        "displayName": {
-          "type": "string",
-          "description": "The display name of the user."
-        },
-        "email": {
-          "type": "string",
-          "description": "The email address of the user.",
-          "format": "email"
-        },
-        "role": {
-          "type": "string",
-          "description": "The role of the user (e.g., admin, worker, vet)."
-        },
-        "farmName": {
-            "type": "string",
-            "description": "The name of the user's farm."
-        },
-        "farmLocation": {
-            "type": "string",
-            "description": "The location of the user's farm."
-        },
-        "farmContact": {
-            "type": "string",
-            "description": "The contact number for the user's farm."
-        }
-      },
-      "required": [
-        "id",
-        "email"
-      ]
     }
   },
   "auth": {
@@ -174,77 +165,37 @@
       {
         "path": "/users/{userId}",
         "definition": {
-          "entityName": "User",
           "schema": {
-            "$ref": "#/backend/entities/User"
+            "$ref": "#/entities/User"
           },
-          "description": "Stores user profiles. Path-based ownership ensures only the user can access their profile.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user, matching Firebase auth UID."
-            }
-          ]
+          "description": "Stores user profiles. Path-based ownership ensures only the user can access their profile."
         }
       },
       {
         "path": "/users/{userId}/flocks/{flockId}",
         "definition": {
-          "entityName": "Flock",
           "schema": {
-            "$ref": "#/backend/entities/Flock"
+            "$ref": "#/entities/Flock"
           },
-          "description": "Stores flock information owned by the user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user."
-            },
-            {
-              "name": "flockId",
-              "description": "The unique ID of the flock."
-            }
-          ]
+          "description": "Stores flock information owned by the user."
         }
       },
       {
         "path": "/users/{userId}/sales/{saleId}",
         "definition": {
-          "entityName": "Sale",
           "schema": {
-            "$ref": "#/backend/entities/Sale"
+            "$ref": "#/entities/Sale"
           },
-          "description": "Stores sales information owned by the user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user."
-            },
-            {
-              "name": "saleId",
-              "description": "The unique ID of the sale."
-            }
-          ]
+          "description": "Stores sales information owned by the user."
         }
       },
       {
         "path": "/users/{userId}/expenditures/{expenditureId}",
         "definition": {
-          "entityName": "Expenditure",
           "schema": {
-            "$ref": "#/backend/entities/Expenditure"
+            "$ref": "#/entities/Expenditure"
           },
-          "description": "Stores expenditure information owned by the user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user."
-            },
-            {
-              "name": "expenditureId",
-              "description": "The unique ID of the expenditure."
-            }
-          ]
+          "description": "Stores expenditure information owned by the user."
         }
       }
     ]
