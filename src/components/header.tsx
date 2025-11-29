@@ -105,10 +105,12 @@ export default function Header() {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <Button asChild>
-            <Link href="/settings">
-                <LogIn className="mr-2 h-4 w-4"/>
-                Sign In
+          <Button variant="ghost" asChild>
+            <Link href="/settings" className="flex items-center gap-2">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback><LogIn className="h-4 w-4"/></AvatarFallback>
+                </Avatar>
+                <span className="font-medium">Sign In</span>
             </Link>
           </Button>
         )}
