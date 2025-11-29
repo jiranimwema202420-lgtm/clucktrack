@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import {
   DropdownMenu,
@@ -13,7 +13,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { ChevronsUpDown, LogIn, LogOut, Settings } from 'lucide-react';
+import { ChevronsUpDown, LogIn, LogOut, Settings, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -36,6 +36,7 @@ const pathToTitle: { [key: string]: string } = {
 
 export default function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const avatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
   const pageTitle = pathToTitle[pathname] || 'CluckHub';
   const { user, auth, firestore } = useFirebase();
@@ -60,6 +61,15 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm lg:px-8">
       <SidebarTrigger className="md:hidden" />
+      
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="icon" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="icon" onClick={() => router.forward()}>
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
 
       <h1 className="text-xl font-semibold">{pageTitle}</h1>
       
