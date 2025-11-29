@@ -25,7 +25,7 @@ export interface Flock {
   totalCost: number; // in $
 };
 
-export const flockSchema = z.object({
+const flockObjectSchema = z.object({
   breed: z.string().min(2, 'Breed name must be at least 2 characters.'),
   count: z.coerce.number().min(1, 'Current count must be at least 1.'),
   hatchDate: z.date({ required_error: 'Please select a hatch date.' }),
@@ -33,12 +33,18 @@ export const flockSchema = z.object({
   averageWeight: z.coerce.number().min(0, 'Average weight must be a positive number.'),
   totalFeedConsumed: z.coerce.number().min(0, 'Total feed consumed must be a positive number.'),
   totalCost: z.coerce.number().min(0, 'Total cost must be a positive number.'),
-}).refine(data => data.count <= data.initialCount, {
+});
+
+export const flockSchema = flockObjectSchema.refine(data => data.count <= data.initialCount, {
     message: "Current count cannot be greater than initial count.",
     path: ["count"],
 });
 
-export const updateFlockSchema = flockSchema.omit({ totalCost: true });
+export const updateFlockSchema = flockObjectSchema.omit({ totalCost: true }).refine(data => data.count <= data.initialCount, {
+    message: "Current count cannot be greater than initial count.",
+    path: ["count"],
+});
+
 
 export const saleSchema = z.object({
   flockId: z.string().min(1, 'A flock must be selected for the sale.'),
