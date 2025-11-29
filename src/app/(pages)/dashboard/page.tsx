@@ -18,7 +18,6 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Flock } from '@/lib/types';
-import { differenceInWeeks } from 'date-fns';
 
 const flockGrowthData = [
   { name: 'Week 1', weight: 0.18 },
