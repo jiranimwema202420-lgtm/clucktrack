@@ -20,6 +20,7 @@
  *   in the root `/users` collection, protecting user privacy.
  * - Self-Creation of User Profile: A user can create their own user profile document, but only
  *   if the document ID matches their authentication UID, ensuring data integrity.
+ * - Data Validation: Writes are validated against a schema to ensure data integrity.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -30,14 +31,42 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Checks if the requesting user is the owner of the document based on the path.
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Checks if a document exists before an update or delete operation.
     function isExistingDocument() {
       return resource != null;
+    }
+
+    // Schema Validation Functions
+    function isValidFlock(flockData) {
+      return flockData.breed is string && flockData.breed.size() > 0
+          && flockData.hatchDate is timestamp
+          && flockData.count is number && flockData.count >= 0
+          && flockData.initialCount is number && flockData.initialCount > 0
+          && flockData.count <= flockData.initialCount
+          && flockData.averageWeight is number && flockData.averageWeight >= 0
+          && flockData.totalFeedConsumed is number && flockData.totalFeedConsumed >= 0
+          && flockData.totalCost is number && flockData.totalCost >= 0;
+    }
+
+    function isValidSale(saleData) {
+      return saleData.flockId is string && saleData.flockId.size() > 0
+          && saleData.quantity is number && saleData.quantity > 0
+          && saleData.pricePerUnit is number && saleData.pricePerUnit > 0
+          && saleData.customer is string && saleData.customer.size() > 0
+          && saleData.saleDate is timestamp
+          && saleData.total is number && saleData.total > 0;
+    }
+
+    function isValidExpenditure(expenditureData) {
+      return expenditureData.category is string && expenditureData.category.size() > 0
+          && expenditureData.quantity is number && expenditureData.quantity > 0
+          && expenditureData.unitPrice is number && expenditureData.unitPrice > 0
+          && expenditureData.amount is number && expenditureData.amount > 0
+          && expenditureData.expenditureDate is timestamp
+          && (expenditureData.description == null || expenditureData.description is string);
     }
 
     match /users/{userId} {
@@ -48,15 +77,24 @@ service cloud.firestore {
       allow delete: if isOwner(userId) && isExistingDocument();
 
       match /flocks/{flockId} {
-        allow read, write: if isOwner(userId);
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidFlock(request.resource.data);
+        allow update: if isOwner(userId) && isExistingDocument() && isValidFlock(request.resource.data);
+        allow delete: if isOwner(userId) && isExistingDocument();
       }
       
       match /sales/{saleId} {
-        allow read, write: if isOwner(userId);
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidSale(request.resource.data);
+        allow update: if isOwner(userId) && isExistingDocument() && isValidSale(request.resource.data);
+        allow delete: if isOwner(userId) && isExistingDocument();
       }
 
       match /expenditures/{expenditureId} {
-        allow read, write: if isOwner(userId);
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidExpenditure(request.resource.data);
+        allow update: if isOwner(userId) && isExistingDocument() && isValidExpenditure(request.resource.data);
+        allow delete: if isOwner(userId) && isExistingDocument();
       }
     }
   }
