@@ -3,6 +3,9 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { FirebaseClientProvider } from '@/firebase';
 import { ThemeProvider } from '@/components/theme-provider';
+import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
+import Header from '@/components/header';
+import Nav from '@/components/nav';
 
 export const metadata: Metadata = {
   title: 'CluckHub',
@@ -24,7 +27,17 @@ export default function RootLayout({
       <body className="font-body antialiased">
           <FirebaseClientProvider>
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-              {children}
+              <SidebarProvider>
+                  <Sidebar>
+                    <Nav />
+                  </Sidebar>
+                  <SidebarInset>
+                    <Header />
+                    <div className="p-4 lg:p-8">
+                      {children}
+                    </div>
+                  </SidebarInset>
+              </SidebarProvider>
             </ThemeProvider>
           </FirebaseClientProvider>
           <Toaster />
