@@ -56,9 +56,9 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameT
         <div className="rounded-lg border bg-background p-2 shadow-sm">
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col space-y-1">
-                <span className="text-[0.70rem] uppercase text-muted-foreground">{label}</span>
+                <span className="text-[0.70rem] uppercase text-muted-foreground">Date</span>
                 <span className="font-bold text-foreground">
-                    {payload[0].payload.date}
+                    {label}
                 </span>
             </div>
             {payload.map((p, i) => (
