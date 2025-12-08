@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { mockSensorData } from '@/lib/data';
-import { Thermometer, Wheat, TrendingUp, Users, HeartPulse, BrainCircuit, ArrowRight, Loader2, TrendingDown } from 'lucide-react';
+import { Thermometer, Wheat, TrendingUp, Users, HeartPulse, BrainCircuit, ArrowRight, Loader2, TrendingDown, Scale } from 'lucide-react';
 import Link from 'next/link';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
@@ -52,6 +52,9 @@ export default function DashboardPage() {
   const currentCount = flocks?.reduce((sum, flock) => sum + flock.count, 0) || 0;
   const mortalityRate = initialCount > 0 ? (((initialCount - currentCount) / initialCount) * 100).toFixed(2) : '0.00';
 
+  const totalWeight = flocks?.reduce((sum, flock) => sum + (flock.count * flock.averageWeight), 0) || 0;
+  const avgWeight = totalChickens > 0 ? (totalWeight / totalChickens).toFixed(2) : '0.00';
+
 
   if (isLoading) {
       return (
@@ -65,10 +68,10 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-8">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
-          title="Avg. Temperature"
-          value={`${mockSensorData.temperature}°C`}
-          icon={<Thermometer className="h-5 w-5" />}
-          description="Optimal range: 22-26°C"
+            title="Avg. Weight"
+            value={`${avgWeight} kg`}
+            icon={<Scale className="h-5 w-5" />}
+            description="Across all flocks"
         />
         <StatsCard
           title="Feed Conversion"
