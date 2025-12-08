@@ -95,6 +95,11 @@ export default function ReportsPage() {
             </div>
         )
     }
+    
+    const monthNameToNumber: { [key: string]: number } = {
+        'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+        'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+    };
 
     const reportData = () => {
         if (selectedFlockId === 'all') {
@@ -125,7 +130,7 @@ export default function ReportsPage() {
                         averageWeight: parseFloat((totalAvgWeight / count).toFixed(2)),
                     };
                 })
-                .sort((a,b) => new Date(`2000-` + a.date + `-01`).getMonth() - new Date(`2000-` + b.date + `-01`).getMonth());
+                .sort((a,b) => monthNameToNumber[a.date] - monthNameToNumber[b.date]);
         } else {
             const selectedFlock = flocks?.find(f => f.id === selectedFlockId);
             if (!selectedFlock) return [];
@@ -186,7 +191,7 @@ export default function ReportsPage() {
             <CardHeader>
                 <CardTitle>Mortality Rate (%)</CardTitle>
                 <CardDescription>
-                    {selectedFlockId === 'all' ? 'Monthly mortality rate over the last 6 months.' : 'Cumulative mortality rate.'}
+                    {selectedFlockId === 'all' ? 'Monthly mortality rate.' : 'Cumulative mortality rate.'}
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -232,6 +237,7 @@ export default function ReportsPage() {
                         />
                         <YAxis
                             tickLine={false}
+                            axisLine={false}
                             tickMargin={10}
                         />
                         <ChartTooltip content={<ChartTooltipContent />} />
