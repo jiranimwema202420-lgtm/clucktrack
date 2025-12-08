@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  experimental: {
+  devServer: {
     allowedDevOrigins: ["*.cloudworkstations.dev"],
   },
   images: {
