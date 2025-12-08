@@ -69,6 +69,7 @@ import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, up
 import { collection, Timestamp, doc } from 'firebase/firestore';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
 
 const recordLossSchema = z.object({
     flockId: z.string().min(1, "Please select a flock"),

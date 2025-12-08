@@ -49,6 +49,8 @@ import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, up
 import { collection, Timestamp, doc } from 'firebase/firestore';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 export default function SalesPage() {
   const [isAddSaleOpen, setAddSaleOpen] = useState(false);
   const [isEditSaleOpen, setEditSaleOpen] = useState(false);

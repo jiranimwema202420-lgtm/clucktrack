@@ -49,6 +49,8 @@ import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, up
 import { collection, Timestamp, doc } from 'firebase/firestore';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 const expenditureCategories = ['Feed', 'Medicine', 'Utilities', 'Labor', 'Equipment', 'Maintenance', 'Day Old Chicks', 'Other'];
 
 export default function ExpenditurePage() {

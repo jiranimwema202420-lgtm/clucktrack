@@ -12,12 +12,14 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { mockSensorData } from '@/lib/data';
-import { Thermometer, Wheat, TrendingUp, Users, HeartPulse, BrainCircuit, ArrowRight, Loader2, TrendingDown, Scale } from 'lucide-react';
+import { Wheat, Users, BrainCircuit, ArrowRight, Loader2, TrendingDown, Scale, HeartPulse } from 'lucide-react';
 import Link from 'next/link';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Flock } from '@/lib/types';
+
+export const dynamic = 'force-dynamic';
 
 const flockGrowthData = [
   { name: 'Week 1', weight: 0.18 },

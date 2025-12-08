@@ -15,6 +15,7 @@ import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Sale, Expenditure } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
 
 export default function FinancialsPage() {
   const { firestore, user } = useFirebase();

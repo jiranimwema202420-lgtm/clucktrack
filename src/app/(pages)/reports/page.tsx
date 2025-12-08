@@ -30,6 +30,7 @@ import { TrendingDown, Scale, Utensils, Loader2 } from 'lucide-react';
 import { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
 import { format, differenceInWeeks, addWeeks } from 'date-fns';
 
+export const dynamic = 'force-dynamic';
 
 const chartConfig = {
   mortality: {
@@ -124,13 +125,14 @@ export default function ReportsPage() {
                     const totalAvgWeight = group.flocks.reduce((sum, f) => sum + f.averageWeight, 0);
                     const count = group.flocks.length;
                     return {
-                        date: format(new Date(group.date), 'MMM'),
+                        date: format(new Date(group.date + '-01T00:00:00')),
                         mortality: parseFloat((totalMortality / count).toFixed(2)),
                         fcr: parseFloat((totalFcr / count).toFixed(2)),
                         averageWeight: parseFloat((totalAvgWeight / count).toFixed(2)),
                     };
                 })
-                .sort((a,b) => monthNameToNumber[a.date] - monthNameToNumber[b.date]);
+                .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                .map(d => ({...d, date: format(new Date(d.date), 'MMM')}));
         } else {
             const selectedFlock = flocks?.find(f => f.id === selectedFlockId);
             if (!selectedFlock) return [];
