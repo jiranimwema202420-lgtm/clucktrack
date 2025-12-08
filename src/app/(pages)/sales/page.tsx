@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -81,6 +81,16 @@ export default function SalesPage() {
       saleDate: new Date(),
     },
   });
+
+  const watchQuantity = form.watch('quantity');
+  const watchPricePerUnit = form.watch('pricePerUnit');
+  const [calculatedTotal, setCalculatedTotal] = useState(0);
+
+  useEffect(() => {
+    const total = (watchQuantity || 0) * (watchPricePerUnit || 0);
+    setCalculatedTotal(total);
+  }, [watchQuantity, watchPricePerUnit]);
+
 
   function onSubmit(values: z.infer<typeof saleSchema>) {
     if (!salesRef || !user || !flocks) return;
@@ -218,32 +228,40 @@ export default function SalesPage() {
             </FormItem>
             )}
         />
-        <FormField
-            control={form.control}
-            name="quantity"
-            render={({ field }) => (
-            <FormItem>
-                <FormLabel>Quantity Sold</FormLabel>
-                <FormControl>
-                <Input type="number" placeholder="e.g., 50" {...field} />
-                </FormControl>
-                <FormMessage />
-            </FormItem>
-            )}
-        />
-        <FormField
-            control={form.control}
-            name="pricePerUnit"
-            render={({ field }) => (
-            <FormItem>
-                <FormLabel>Price per Bird ($)</FormLabel>
-                <FormControl>
-                <Input type="number" step="0.01" placeholder="e.g., 12.50" {...field} />
-                </FormControl>
-                <FormMessage />
-            </FormItem>
-            )}
-        />
+        <div className="grid grid-cols-2 gap-4">
+            <FormField
+                control={form.control}
+                name="quantity"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Quantity Sold</FormLabel>
+                    <FormControl>
+                    <Input type="number" placeholder="e.g., 50" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="pricePerUnit"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Price per Bird ($)</FormLabel>
+                    <FormControl>
+                    <Input type="number" step="0.01" placeholder="e.g., 12.50" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        </div>
+         <FormItem>
+            <FormLabel>Total Amount ($)</FormLabel>
+            <FormControl>
+                <Input type="text" readOnly value={`$${calculatedTotal.toFixed(2)}`} className="font-semibold bg-muted" />
+            </FormControl>
+        </FormItem>
         <FormField
             control={form.control}
             name="customer"
@@ -320,11 +338,9 @@ export default function SalesPage() {
                 <DialogDescription>Enter the details of the sale below.</DialogDescription>
             </DialogHeader>
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)}>
-                    <div className="py-4">
-                        <FormFields />
-                    </div>
-                    <DialogFooter>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="py-4">
+                    <FormFields />
+                    <DialogFooter className="mt-4">
                         <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
                         <Button type="submit" disabled={isLoadingFlocks}>Record Sale</Button>
                     </DialogFooter>
@@ -341,11 +357,9 @@ export default function SalesPage() {
                 <DialogDescription>Update the details of this sale.</DialogDescription>
             </DialogHeader>
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onEditSubmit)}>
-                    <div className="py-4">
-                        <FormFields />
-                    </div>
-                    <DialogFooter>
+                <form onSubmit={form.handleSubmit(onEditSubmit)} className="py-4">
+                    <FormFields />
+                    <DialogFooter className="mt-4">
                         <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
                         <Button type="submit" disabled={isLoadingFlocks}>Save Changes</Button>
                     </DialogFooter>

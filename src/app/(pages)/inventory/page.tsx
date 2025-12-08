@@ -231,7 +231,7 @@ export default function InventoryPage() {
   }
 
   const FormFields = () => (
-    <>
+    <div className="space-y-4">
         <FormField
             control={form.control}
             name="breed"
@@ -355,7 +355,7 @@ export default function InventoryPage() {
             </FormItem>
             )}
         />
-    </>
+    </div>
   );
 
   return (
@@ -456,7 +456,7 @@ export default function InventoryPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onAddFlockSubmit)} className="space-y-4">
+                  <form onSubmit={form.handleSubmit(onAddFlockSubmit)} className="space-y-4 py-4">
                     <FormFields />
                      <DialogFooter>
                         <DialogClose asChild>
@@ -479,7 +479,7 @@ export default function InventoryPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onEditFlockSubmit)} className="space-y-4">
+                  <form onSubmit={form.handleSubmit(onEditFlockSubmit)} className="space-y-4 py-4">
                     <FormFields />
                      <DialogFooter>
                         <DialogClose asChild>

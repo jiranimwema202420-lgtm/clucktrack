@@ -84,7 +84,8 @@ export default function ExpenditurePage() {
   useEffect(() => {
     const amount = (watchQuantity || 0) * (watchUnitPrice || 0);
     setCalculatedAmount(amount);
-  }, [watchQuantity, watchUnitPrice]);
+    form.setValue('amount', amount, { shouldValidate: true });
+  }, [watchQuantity, watchUnitPrice, form]);
 
   function onSubmit(values: z.infer<typeof expenditureSchema>) {
     if (!expendituresRef) return;
@@ -192,7 +193,7 @@ export default function ExpenditurePage() {
               <FormItem>
                   <FormLabel>Quantity</FormLabel>
                   <FormControl>
-                  <Input type="number" placeholder="e.g., 10" {...field} />
+                  <Input type="number" placeholder="e.g., 10" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
                   </FormControl>
                   <FormMessage />
               </FormItem>
@@ -205,7 +206,7 @@ export default function ExpenditurePage() {
               <FormItem>
                   <FormLabel>Unit Price ($)</FormLabel>
                   <FormControl>
-                  <Input type="number" step="0.01" placeholder="e.g., 25.00" {...field} />
+                  <Input type="number" step="0.01" placeholder="e.g., 25.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
                   </FormControl>
                   <FormMessage />
               </FormItem>
@@ -215,8 +216,9 @@ export default function ExpenditurePage() {
         <FormItem>
             <FormLabel>Total Amount ($)</FormLabel>
             <FormControl>
-                <Input type="text" readOnly value={calculatedAmount.toFixed(2)} className="bg-muted" />
+                <Input type="text" readOnly value={calculatedAmount.toFixed(2)} className="font-semibold bg-muted" />
             </FormControl>
+             <FormMessage />
         </FormItem>
         <FormField
             control={form.control}
@@ -293,11 +295,9 @@ export default function ExpenditurePage() {
                     <DialogDescription>Enter the details of the farm expense.</DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)}>
-                        <div className="py-4">
-                            <FormFields />
-                        </div>
-                        <DialogFooter>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="py-4">
+                        <FormFields />
+                        <DialogFooter className="mt-4">
                             <DialogClose asChild><Button variant="secondary" type="button">Cancel</Button></DialogClose>
                             <Button type="submit">Save Expense</Button>
                         </DialogFooter>
@@ -313,11 +313,9 @@ export default function ExpenditurePage() {
                     <DialogDescription>Update the details of this expense.</DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onEditSubmit)}>
-                        <div className="py-4">
-                            <FormFields />
-                        </div>
-                        <DialogFooter>
+                    <form onSubmit={form.handleSubmit(onEditSubmit)} className="py-4">
+                        <FormFields />
+                        <DialogFooter className="mt-4">
                             <DialogClose asChild><Button variant="secondary" type="button">Cancel</Button></DialogClose>
                             <Button type="submit">Save Changes</Button>
                         </DialogFooter>

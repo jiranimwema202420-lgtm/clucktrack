@@ -64,13 +64,13 @@ export const expenditureSchema = z.object({
   category: z.string().min(1, 'An expenditure category must be selected.'),
   quantity: z.coerce.number().positive('Quantity must be a positive number.'),
   unitPrice: z.coerce.number().positive('Unit price must be a positive number.'),
+  amount: z.coerce.number(),
   description: z.string().optional(),
   expenditureDate: z.date({ required_error: 'Please select an expenditure date.' }),
 });
 
 export interface Expenditure extends z.infer<typeof expenditureSchema> { 
   id: string,
-  amount: number,
   expenditureDate: Timestamp,
 };
 
