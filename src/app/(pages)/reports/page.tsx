@@ -61,7 +61,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameT
                 </span>
             </div>
             {payload.map((p, i) => (
-                <div key={i} className="flex flex-col space-y-1">
+                <div key={i} className="flex flex-col space-y-1 text-right">
                     <span className="text-[0.70rem] uppercase text-muted-foreground" style={{color: p.color || (chartConfig as any)[p.dataKey as string]?.color}}>
                         {p.name}
                     </span>
@@ -125,7 +125,7 @@ export default function ReportsPage() {
                         averageWeight: parseFloat((totalAvgWeight / count).toFixed(2)),
                     };
                 })
-                .sort((a,b) => new Date(a.date).getMonth() - new Date(b.date).getMonth());
+                .sort((a,b) => new Date(`2000-` + a.date + `-01`).getMonth() - new Date(`2000-` + b.date + `-01`).getMonth());
         } else {
             const selectedFlock = flocks?.find(f => f.id === selectedFlockId);
             if (!selectedFlock) return [];
@@ -258,13 +258,13 @@ export default function ReportsPage() {
                             axisLine={false}
                             tickFormatter={(value) => value.slice(0, 6)}
                         />
-                        <YAxis yAxisId="left" orientation="left" stroke="var(--color-averageWeight)" tickLine={false} axisLine={false} tickMargin={10} unit="kg"/>
-                        <YAxis yAxisId="right" orientation="right" stroke="var(--color-fcr)" tickLine={false} axisLine={false} tickMargin={10} />
+                        <YAxis yAxisId="left" orientation="left" stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} tickMargin={10} tickFormatter={(value) => `${value}kg`} />
+                        <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} tickMargin={10} />
                         <Tooltip content={<CustomTooltip />} />
                         <ChartLegend content={<ChartLegendContent />} />
-                        <Line yAxisId="left" type="monotone" dataKey="averageWeight" name="Avg. Weight" stroke="var(--color-averageWeight)" strokeWidth={2} unit=" kg" />
+                        <Line yAxisId="left" type="monotone" dataKey="averageWeight" name="Avg. Weight" stroke="var(--color-averageWeight)" strokeWidth={2} />
                         <Line yAxisId="right" type="monotone" dataKey="fcr" name="FCR" stroke="var(--color-fcr)" strokeWidth={2} />
-                        <Line yAxisId="right" type="monotone" dataKey="mortality" name="Mortality" stroke="var(--color-mortality)" strokeWidth={2} strokeDasharray="3 3" unit="%" />
+                        <Line yAxisId="right" type="monotone" dataKey="mortality" name="Mortality" stroke="var(--color-mortality)" strokeWidth={2} strokeDasharray="3 3" />
                     </LineChart>
                 </ChartContainer>
             </CardContent>
