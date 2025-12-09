@@ -12,6 +12,8 @@ import Header from '@/components/header';
 import Nav from '@/components/nav';
 import { Loader2 } from 'lucide-react';
 
+const publicRoutes = ['/login'];
+
 function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user, isUserLoading } = useFirebase();
@@ -24,18 +26,25 @@ function AppLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!user && pathname !== '/login') {
+  const isPublicRoute = publicRoutes.includes(pathname);
+  const isLandingPage = pathname === '/';
+
+  // If user is not logged in and trying to access a protected route
+  if (!user && !isPublicRoute && !isLandingPage) {
     redirect('/login');
   }
   
-  if (user && pathname === '/login') {
+  // If user is logged in and on a public route or landing page
+  if (user && (isPublicRoute || isLandingPage)) {
     redirect('/dashboard');
   }
   
-  if (pathname === '/login') {
-    return <div className="p-4 lg:p-8">{children}</div>;
+  // For landing and login pages, render them without the main app layout
+  if (isLandingPage || isPublicRoute) {
+    return <div className="bg-background">{children}</div>;
   }
 
+  // Render the full app layout for authenticated users
   return (
     <SidebarProvider>
       <Sidebar>
@@ -54,7 +63,7 @@ function AppLayout({ children }: { children: ReactNode }) {
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.React.ReactNode;
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
