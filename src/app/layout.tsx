@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import Header from '@/components/header';
 import Nav from '@/components/nav';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export const metadata: Metadata = {
   title: 'CluckHub',
@@ -42,6 +43,7 @@ export default function RootLayout({
             </ThemeProvider>
           </FirebaseClientProvider>
           <Toaster />
+          <SpeedInsights />
       </body>
     </html>
   );
