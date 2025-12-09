@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -24,18 +25,12 @@ import { useTheme } from 'next-themes';
 import { Moon, Sun } from 'lucide-react';
 import { useFirebase, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { initiateEmailSignIn, initiateEmailSignUp } from '@/firebase/non-blocking-login';
 import { updateProfile } from 'firebase/auth';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
-
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6, 'Password must be at least 6 characters.'),
-});
 
 const profileSchema = z.object({
     displayName: z.string().min(2, "Display name must be at least 2 characters.").optional().or(z.literal('')),
@@ -50,20 +45,14 @@ const farmDetailsSchema = z.object({
 
 export default function SettingsPage() {
   const { setTheme, theme } = useTheme();
-  const { user, auth, firestore } = useFirebase();
+  const { user, firestore } = useFirebase();
   const { toast } = useToast();
-  const [isRegistering, setIsRegistering] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => {
     if (!user) return null;
     return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
-
-  const loginForm = useForm<z.infer<typeof loginSchema>>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
-  });
 
   const profileForm = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
@@ -93,21 +82,6 @@ export default function SettingsPage() {
   }, [user, userProfile, profileForm, farmDetailsForm]);
 
 
-  async function onLoginSubmit(values: z.infer<typeof loginSchema>) {
-    if (!auth) return;
-    try {
-        if(isRegistering) {
-            await initiateEmailSignUp(auth, values.email, values.password);
-            toast({ title: 'Registration Successful', description: 'You have been signed up.' });
-        } else {
-            await initiateEmailSignIn(auth, values.email, values.password);
-            toast({ title: 'Login Successful', description: 'You are now signed in.' });
-        }
-    } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Authentication Failed', description: error.message });
-    }
-  }
-
   async function onProfileSubmit(values: z.infer<typeof profileSchema>) {
     if (!user) return;
     try {
@@ -123,12 +97,9 @@ export default function SettingsPage() {
 
   async function onFarmDetailsSubmit(values: z.infer<typeof farmDetailsSchema>) {
     if (!userProfileRef) return;
-    try {
-        setDocumentNonBlocking(userProfileRef, values, { merge: true });
-        toast({ title: 'Farm Details Updated', description: 'Your farm information has been saved.' });
-    } catch(error: any) {
-        toast({ variant: 'destructive', title: 'Update Failed', description: error.message });
-    }
+    
+    setDocumentNonBlocking(userProfileRef, values, { merge: true });
+    toast({ title: 'Farm Details Updated', description: 'Your farm information has been saved.' });
   }
 
   return (
@@ -160,135 +131,85 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
       
-      { user ? (
-        <>
-            <Card>
-                <CardHeader>
-                <CardTitle>Profile</CardTitle>
-                <CardDescription>Manage your personal account details.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                <Form {...profileForm}>
-                    <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
-                    <FormField
-                        control={profileForm.control}
-                        name="displayName"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Display Name</FormLabel>
-                            <FormControl>
-                            <Input placeholder="Your Name" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <Button type="submit">Save Changes</Button>
-                    </form>
-                </Form>
-                </CardContent>
-            </Card>
+      <Card>
+        <CardHeader>
+        <CardTitle>Profile</CardTitle>
+        <CardDescription>Manage your personal account details.</CardDescription>
+        </CardHeader>
+        <CardContent>
+        <Form {...profileForm}>
+            <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
+            <FormField
+                control={profileForm.control}
+                name="displayName"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Display Name</FormLabel>
+                    <FormControl>
+                    <Input placeholder="Your Name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <Button type="submit">Save Changes</Button>
+            </form>
+        </Form>
+        </CardContent>
+    </Card>
 
-            <Card>
-                <CardHeader>
-                <CardTitle>Farm Details</CardTitle>
-                <CardDescription>Manage your farm's information.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                <Form {...farmDetailsForm}>
-                    <form onSubmit={farmDetailsForm.handleSubmit(onFarmDetailsSubmit)} className="space-y-4">
-                    <FormField
-                        control={farmDetailsForm.control}
-                        name="farmName"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Farm Name</FormLabel>
-                            <FormControl>
-                            <Input placeholder="e.g., CluckHub Farms" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={farmDetailsForm.control}
-                        name="farmLocation"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Farm Location</FormLabel>
-                            <FormControl>
-                            <Input placeholder="e.g., Nairobi, Kenya" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                     <FormField
-                        control={farmDetailsForm.control}
-                        name="farmContact"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Contact Number</FormLabel>
-                            <FormControl>
-                            <Input type="tel" placeholder="e.g., +254 712 345 678" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <Button type="submit">Save Farm Details</Button>
-                    </form>
-                </Form>
-                </CardContent>
-            </Card>
-        </>
-      ) : (
-        <Card>
-            <CardHeader>
-            <CardTitle>{isRegistering ? 'Create an Account' : 'Sign In'}</CardTitle>
-            <CardDescription>{isRegistering ? 'Enter your details to create a new account.' : 'Sign in to access your dashboard.'}</CardDescription>
-            </CardHeader>
-            <CardContent>
-            <Form {...loginForm}>
-                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+    <Card>
+        <CardHeader>
+        <CardTitle>Farm Details</CardTitle>
+        <CardDescription>Manage your farm's information.</CardDescription>
+        </CardHeader>
+        <CardContent>
+        <Form {...farmDetailsForm}>
+            <form onSubmit={farmDetailsForm.handleSubmit(onFarmDetailsSubmit)} className="space-y-4">
+            <FormField
+                control={farmDetailsForm.control}
+                name="farmName"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Farm Name</FormLabel>
+                    <FormControl>
+                    <Input placeholder="e.g., CluckHub Farms" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={farmDetailsForm.control}
+                name="farmLocation"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Farm Location</FormLabel>
+                    <FormControl>
+                    <Input placeholder="e.g., Nairobi, Kenya" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
                 <FormField
-                    control={loginForm.control}
-                    name="email"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                        <Input type="email" placeholder="you@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={loginForm.control}
-                    name="password"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                        <Input type="password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <div className='flex flex-col gap-4'>
-                    <Button type="submit" className="w-full">{isRegistering ? 'Register' : 'Sign In'}</Button>
-                    <Button variant="link" type="button" onClick={() => setIsRegistering(!isRegistering)}>
-                        {isRegistering ? 'Already have an account? Sign In' : "Don't have an account? Register"}
-                    </Button>
-                </div>
-                </form>
-            </Form>
-            </CardContent>
-        </Card>
-      )}
-
+                control={farmDetailsForm.control}
+                name="farmContact"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Contact Number</FormLabel>
+                    <FormControl>
+                    <Input type="tel" placeholder="e.g., +254 712 345 678" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <Button type="submit">Save Farm Details</Button>
+            </form>
+        </Form>
+        </CardContent>
+    </Card>
     </div>
   );
 }
