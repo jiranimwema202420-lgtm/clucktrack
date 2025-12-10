@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -56,7 +57,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameT
         <div className="rounded-lg border bg-background p-2 shadow-sm">
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col space-y-1">
-                <span className="text-[0.70rem] uppercase text-muted-foreground">Date</span>
+                <span className="text-[0.70rem] uppercase text-muted-foreground">Flock</span>
                 <span className="font-bold text-foreground">
                     {label}
                 </span>
@@ -97,42 +98,20 @@ export default function ReportsPage() {
         )
     }
     
-    const monthNameToNumber: { [key: string]: number } = {
-        'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
-        'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
-    };
-    
     const reportData = () => {
         if (selectedFlockId === 'all') {
-            return (flocks || [])
-                .reduce((acc, flock) => {
-                    const date = format(flock.hatchDate.toDate(), 'yyyy-MM');
-                    const mortality = flock.initialCount > 0 ? ((flock.initialCount - flock.count) / flock.initialCount) * 100 : 0;
-                    const totalWeightGain = flock.count * flock.averageWeight;
-                    const fcr = flock.totalFeedConsumed > 0 && totalWeightGain > 0 ? flock.totalFeedConsumed / totalWeightGain : 0;
-
-                    const existing = acc.find(item => item.date === date);
-                    if (existing) {
-                        existing.flocks.push({ mortality, fcr, averageWeight: flock.averageWeight });
-                    } else {
-                        acc.push({ date, flocks: [{ mortality, fcr, averageWeight: flock.averageWeight }] });
-                    }
-                    return acc;
-                }, [] as { date: string; flocks: { mortality: number; fcr: number; averageWeight: number }[] }[])
-                .map(group => {
-                    const totalMortality = group.flocks.reduce((sum, f) => sum + f.mortality, 0);
-                    const totalFcr = group.flocks.reduce((sum, f) => sum + f.fcr, 0);
-                    const totalAvgWeight = group.flocks.reduce((sum, f) => sum + f.averageWeight, 0);
-                    const count = group.flocks.length;
-                    return {
-                        date: new Date(group.date + '-01T00:00:00'),
-                        mortality: parseFloat((totalMortality / count).toFixed(2)),
-                        fcr: parseFloat((totalFcr / count).toFixed(2)),
-                        averageWeight: parseFloat((totalAvgWeight / count).toFixed(2)),
-                    };
-                })
-                .sort((a,b) => a.date.getTime() - b.date.getTime())
-                .map(d => ({...d, date: format(d.date, 'MMM')}));
+             return (flocks || []).map((flock, index) => {
+                const mortality = flock.initialCount > 0 ? ((flock.initialCount - flock.count) / flock.initialCount) * 100 : 0;
+                const totalWeightGain = flock.count * flock.averageWeight;
+                const fcr = flock.totalFeedConsumed > 0 && totalWeightGain > 0 ? flock.totalFeedConsumed / totalWeightGain : 0;
+                
+                return {
+                    name: `${flock.breed.slice(0, 15)}${flock.breed.length > 15 ? '...' : ''} (${flock.id.substring(0, 4)})`,
+                    mortality: parseFloat(mortality.toFixed(2)),
+                    fcr: parseFloat(fcr.toFixed(2)),
+                    averageWeight: parseFloat(flock.averageWeight.toFixed(2)),
+                };
+            });
         } else {
             const selectedFlock = flocks?.find(f => f.id === selectedFlockId);
             if (!selectedFlock) return [];
@@ -150,7 +129,7 @@ export default function ReportsPage() {
                 const estimatedFCR = estimatedFeed > 0 && estimatedWeightGain > 0 ? estimatedFeed / estimatedWeightGain : 0;
 
                 weeklyData.push({
-                    date: `Week ${i}`,
+                    name: `Week ${i}`,
                     mortality: selectedFlock.initialCount > 0 ? parseFloat((((selectedFlock.initialCount - selectedFlock.count) / selectedFlock.initialCount) * 100).toFixed(2)) : 0, // Mortality is cumulative, so it's constant weekly for this mock data
                     fcr: parseFloat(estimatedFCR.toFixed(2)),
                     averageWeight: parseFloat(estimatedWeight.toFixed(2)),
@@ -162,7 +141,7 @@ export default function ReportsPage() {
     
     const data = reportData();
     const pageTitle = selectedFlockId === 'all' ? 'Overall Farm Performance' : `Flock ${flocks?.find(f => f.id === selectedFlockId)?.breed || ''} Report`;
-    const pageDescription = selectedFlockId === 'all' ? 'Monthly averages across all flocks.' : `Weekly performance for flock ${selectedFlockId.substring(0,6)}...`;
+    const pageDescription = selectedFlockId === 'all' ? 'A side-by-side comparison of all active flocks.' : `Weekly performance for flock ${selectedFlockId.substring(0,6)}...`;
 
 
   return (
@@ -177,7 +156,7 @@ export default function ReportsPage() {
                     <SelectValue placeholder="Select a report view" />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="all">All Flocks (Monthly)</SelectItem>
+                    <SelectItem value="all">All Flocks (by Breed)</SelectItem>
                     {flocks?.map(flock => (
                         <SelectItem key={flock.id} value={flock.id}>
                             {flock.breed} ({flock.id.substring(0,6)}...)
@@ -193,7 +172,7 @@ export default function ReportsPage() {
             <CardHeader>
                 <CardTitle>Mortality Rate (%)</CardTitle>
                 <CardDescription>
-                    {selectedFlockId === 'all' ? 'Monthly mortality rate.' : 'Cumulative mortality rate.'}
+                    {selectedFlockId === 'all' ? 'Mortality rate comparison by flock.' : 'Cumulative mortality rate over time.'}
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -201,11 +180,11 @@ export default function ReportsPage() {
                     <BarChart accessibilityLayer data={data}>
                         <CartesianGrid vertical={false} />
                         <XAxis
-                            dataKey="date"
+                            dataKey="name"
                             tickLine={false}
                             tickMargin={10}
                             axisLine={false}
-                            tickFormatter={(value) => value.slice(0, 6)}
+                            tickFormatter={(value) => value.slice(0, 10)}
                         />
                          <YAxis
                             tickLine={false}
@@ -223,7 +202,7 @@ export default function ReportsPage() {
             <CardHeader>
                 <CardTitle>Feed Conversion Ratio (FCR)</CardTitle>
                 <CardDescription>
-                    {selectedFlockId === 'all' ? 'Efficiency of converting feed into mass.' : 'Weekly FCR projection.'}
+                    {selectedFlockId === 'all' ? 'FCR comparison by flock.' : 'Weekly FCR projection.'}
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -231,11 +210,11 @@ export default function ReportsPage() {
                     <LineChart accessibilityLayer data={data}>
                         <CartesianGrid vertical={false} />
                         <XAxis
-                            dataKey="date"
+                            dataKey="name"
                             tickLine={false}
                             tickMargin={10}
                             axisLine={false}
-                            tickFormatter={(value) => value.slice(0, 6)}
+                            tickFormatter={(value) => value.slice(0, 10)}
                         />
                         <YAxis
                             tickLine={false}
@@ -260,11 +239,11 @@ export default function ReportsPage() {
                     <LineChart accessibilityLayer data={data}>
                         <CartesianGrid vertical={false} />
                         <XAxis
-                            dataKey="date"
+                            dataKey="name"
                             tickLine={false}
                             tickMargin={10}
                             axisLine={false}
-                            tickFormatter={(value) => value.slice(0, 6)}
+                            tickFormatter={(value) => value.slice(0, 10)}
                         />
                         <YAxis yAxisId="left" orientation="left" stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} tickMargin={10} tickFormatter={(value) => `${value}kg`} />
                         <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} tickMargin={10} />
@@ -280,3 +259,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+    
