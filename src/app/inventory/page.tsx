@@ -85,7 +85,6 @@ const recordEggsSchema = z.object({
 });
 
 export default function InventoryPage() {
-  const [isAddFlockOpen, setAddFlockOpen] = useState(false);
   const [isEditFlockOpen, setEditFlockOpen] = useState(false);
   const [isRecordLossOpen, setRecordLossOpen] = useState(false);
   const [isRecordEggsOpen, setRecordEggsOpen] = useState(false);
@@ -120,35 +119,6 @@ export default function InventoryPage() {
   });
 
   const watchFlockType = form.watch('type');
-
-  function onAddFlockSubmit(values: z.infer<typeof flockSchema>) {
-    if (!flocksRef) return;
-    
-    const newFlockData = {
-      ...values,
-      hatchDate: Timestamp.fromDate(values.hatchDate)
-    };
-
-    addDocumentNonBlocking(flocksRef, newFlockData);
-    
-    toast({
-        title: "Flock Added",
-        description: `${values.count} ${values.breed} chicks have been added to the inventory.`
-    })
-    form.reset({
-      breed: '',
-      type: 'Broiler',
-      count: 100,
-      hatchDate: new Date(),
-      initialCount: 100,
-      averageWeight: 0.1,
-      totalFeedConsumed: 0,
-      totalCost: 0,
-      eggProductionRate: 0,
-      totalEggsCollected: 0,
-    });
-    setAddFlockOpen(false);
-  }
 
   function onEditFlockSubmit(values: z.infer<typeof flockSchema>) {
     if (!user || !selectedFlock) return;
@@ -601,47 +571,6 @@ export default function InventoryPage() {
                         </form>
                     </Form>
                 </DialogContent>
-            </Dialog>
-            <Dialog open={isAddFlockOpen} onOpenChange={(isOpen) => {
-                if(isOpen) form.reset({
-                    breed: '',
-                    type: 'Broiler',
-                    count: 100,
-                    hatchDate: new Date(),
-                    initialCount: 100,
-                    averageWeight: 0.1,
-                    totalFeedConsumed: 0,
-                    totalCost: 0,
-                    eggProductionRate: 0,
-                    totalEggsCollected: 0,
-                });
-                setAddFlockOpen(isOpen);
-            }}>
-              <DialogTrigger asChild>
-                <Button>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Chicks
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add New Flock</DialogTitle>
-                  <DialogDescription>
-                    Enter the details for the new flock of chicks.
-                  </DialogDescription>
-                </DialogHeader>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onAddFlockSubmit)} className="space-y-4 py-4">
-                    <FormFields />
-                     <DialogFooter>
-                        <DialogClose asChild>
-                            <Button type="button" variant="secondary">Cancel</Button>
-                        </DialogClose>
-                        <Button type="submit">Add Flock</Button>
-                    </DialogFooter>
-                  </form>
-                </Form>
-              </DialogContent>
             </Dialog>
 
             {/* Edit Flock Dialog */}
