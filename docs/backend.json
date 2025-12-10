@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -33,6 +34,10 @@
         "farmContact": {
           "type": "string",
           "description": "The contact number for the user's farm."
+        },
+        "currency": {
+          "type": "string",
+          "description": "The user's preferred currency code (e.g., USD, EUR, KES)."
         }
       },
       "required": ["id", "email"]

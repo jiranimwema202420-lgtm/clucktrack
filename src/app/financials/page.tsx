@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -14,11 +15,13 @@ import { format } from 'date-fns';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Sale, Expenditure } from '@/lib/types';
+import { useCurrency } from '@/hooks/use-currency';
 
 export const dynamic = 'force-dynamic';
 
 export default function FinancialsPage() {
   const { firestore, user } = useFirebase();
+  const { formatCurrency, currencySymbol } = useCurrency();
 
   const salesRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -67,19 +70,19 @@ export default function FinancialsPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatsCard
           title="Total Revenue"
-          value={`$${totalRevenue.toLocaleString()}`}
+          value={formatCurrency(totalRevenue)}
           icon={<TrendingUp className="h-5 w-5" />}
           description="Total income from sales"
         />
         <StatsCard
           title="Total Expenditure"
-          value={`$${totalExpenditure.toLocaleString()}`}
+          value={formatCurrency(totalExpenditure)}
           icon={<TrendingDown className="h-5 w-5" />}
           description="Total farm expenses"
         />
         <StatsCard
           title="Net Profit"
-          value={`$${netProfit.toLocaleString()}`}
+          value={formatCurrency(netProfit)}
           icon={<DollarSign className="h-5 w-5" />}
           description="Revenue minus expenditures"
           className={netProfit >= 0 ? 'bg-green-100 dark:bg-green-900/50' : 'bg-red-100 dark:bg-red-900/50'}
@@ -106,9 +109,10 @@ export default function FinancialsPage() {
                     fontSize={12}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value) => `$${value}`}
+                    tickFormatter={(value) => `${currencySymbol}${value}`}
                     />
                     <Tooltip
+                        formatter={(value: number) => formatCurrency(value)}
                         contentStyle={{
                             background: "hsl(var(--background))",
                             borderColor: "hsl(var(--border))",

@@ -49,6 +49,7 @@ import { saleSchema } from '@/lib/types';
 import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, Timestamp, doc } from 'firebase/firestore';
 import { z } from 'zod';
+import { useCurrency } from '@/hooks/use-currency';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,6 +61,7 @@ export default function SalesPage() {
 
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
+  const { formatCurrency, currencySymbol } = useCurrency();
 
   const salesRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -124,7 +126,7 @@ export default function SalesPage() {
     };
     addDocumentNonBlocking(salesRef, newSale);
 
-    toast({ title: 'Sale Recorded', description: `Recorded sale of ${values.quantity} birds to ${values.customer} for $${total.toFixed(2)}.` });
+    toast({ title: 'Sale Recorded', description: `Recorded sale of ${values.quantity} birds to ${values.customer} for ${formatCurrency(total)}.` });
     form.reset();
     setAddSaleOpen(false);
   }
@@ -247,7 +249,7 @@ export default function SalesPage() {
                 <FormItem>
                     <FormLabel>Quantity Sold</FormLabel>
                     <FormControl>
-                    <Input type="number" placeholder="e.g., 50" {...field} />
+                    <Input type="number" placeholder="e.g., 50" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -258,9 +260,9 @@ export default function SalesPage() {
                 name="pricePerUnit"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Price per Bird ($)</FormLabel>
+                    <FormLabel>Price per Bird ({currencySymbol})</FormLabel>
                     <FormControl>
-                    <Input type="number" step="0.01" placeholder="e.g., 12.50" {...field} />
+                    <Input type="number" step="0.01" placeholder="e.g., 12.50" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -268,9 +270,9 @@ export default function SalesPage() {
             />
         </div>
          <FormItem>
-            <FormLabel>Total Amount ($)</FormLabel>
+            <FormLabel>Total Amount ({currencySymbol})</FormLabel>
             <FormControl>
-                <Input type="text" readOnly value={`$${calculatedTotal.toFixed(2)}`} className="font-semibold bg-muted" />
+                <Input type="text" readOnly value={`${currencySymbol}${calculatedTotal.toFixed(2)}`} className="font-semibold bg-muted" />
             </FormControl>
              <FormMessage />
         </FormItem>
@@ -419,7 +421,7 @@ export default function SalesPage() {
                     <TableCell>{flocks?.find(f => f.id === sale.flockId)?.breed || sale.flockId.substring(0,6)}</TableCell>
                     <TableCell>{sale.customer}</TableCell>
                     <TableCell className="text-right">{sale.quantity}</TableCell>
-                    <TableCell className="text-right">${sale.total.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(sale.total)}</TableCell>
                     <TableCell className="text-right">
                         <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={() => handleEditClick(sale)}>
                             <Pencil className="h-4 w-4" />

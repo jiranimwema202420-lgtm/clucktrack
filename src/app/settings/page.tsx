@@ -11,6 +11,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter
 } from '@/components/ui/card';
 import {
   Form,
@@ -21,8 +22,9 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTheme } from 'next-themes';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, DollarSign } from 'lucide-react';
 import { useFirebase, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { updateProfile } from 'firebase/auth';
@@ -42,6 +44,16 @@ const farmDetailsSchema = z.object({
     farmContact: z.string().min(10, "Contact must be at least 10 characters.").optional().or(z.literal('')),
 });
 
+const currencySchema = z.object({
+    currency: z.string().min(2, "Please select a currency"),
+});
+
+const currencies = [
+    { value: 'USD', label: 'USD - United States Dollar' },
+    { value: 'EUR', label: 'EUR - Euro' },
+    { value: 'KES', label: 'KES - Kenyan Shilling' },
+    { value: 'NGN', label: 'NGN - Nigerian Naira' },
+];
 
 export default function SettingsPage() {
   const { setTheme, theme } = useTheme();
@@ -68,6 +80,13 @@ export default function SettingsPage() {
     },
   });
 
+  const currencyForm = useForm<z.infer<typeof currencySchema>>({
+    resolver: zodResolver(currencySchema),
+    values: {
+        currency: userProfile?.currency || 'USD',
+    }
+  });
+
   useEffect(() => {
     if (user) {
       profileForm.reset({ displayName: user.displayName || '' });
@@ -78,8 +97,11 @@ export default function SettingsPage() {
             farmLocation: userProfile.farmLocation || '',
             farmContact: userProfile.farmContact || '',
         });
+        currencyForm.reset({
+            currency: userProfile.currency || 'USD',
+        });
     }
-  }, [user, userProfile, profileForm, farmDetailsForm]);
+  }, [user, userProfile, profileForm, farmDetailsForm, currencyForm]);
 
 
   async function onProfileSubmit(values: z.infer<typeof profileSchema>) {
@@ -101,6 +123,13 @@ export default function SettingsPage() {
     setDocumentNonBlocking(userProfileRef, values, { merge: true });
     toast({ title: 'Farm Details Updated', description: 'Your farm information has been saved.' });
   }
+
+  async function onCurrencySubmit(values: z.infer<typeof currencySchema>) {
+    if (!userProfileRef) return;
+    setDocumentNonBlocking(userProfileRef, values, { merge: true });
+    toast({ title: 'Currency Updated', description: `Your currency has been set to ${values.currency}.` });
+  }
+
 
   return (
     <div className="grid gap-8">
@@ -130,6 +159,44 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+            <CardTitle>Currency</CardTitle>
+            <CardDescription>Select your preferred currency for financial tracking.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Form {...currencyForm}>
+                <form onSubmit={currencyForm.handleSubmit(onCurrencySubmit)} className="space-y-4">
+                    <FormField
+                    control={currencyForm.control}
+                    name="currency"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Default Currency</FormLabel>
+                        <div className="flex gap-2">
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a currency" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                {currencies.map(c => (
+                                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                             <Button type="submit">Save Currency</Button>
+                        </div>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                </form>
+            </Form>
+        </CardContent>
+    </Card>
       
       <Card>
         <CardHeader>

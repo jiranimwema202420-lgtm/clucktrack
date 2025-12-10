@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState } from 'react';
@@ -69,6 +70,7 @@ import { flockSchema } from '@/lib/types';
 import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, Timestamp, doc } from 'firebase/firestore';
 import { z } from 'zod';
+import { useCurrency } from '@/hooks/use-currency';
 
 export const dynamic = 'force-dynamic';
 
@@ -85,6 +87,7 @@ export default function InventoryPage() {
 
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
+  const { formatCurrency } = useCurrency();
 
   const flocksRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -230,7 +233,7 @@ export default function InventoryPage() {
   const calculateCostPerBird = (flock: Flock) => {
     if(!flock.count || !flock.totalCost || flock.count <= 0) return 'N/A';
     const cost = flock.totalCost / flock.count;
-    return `$${cost.toFixed(2)}`;
+    return formatCurrency(cost);
   }
 
   const FormFields = ({ isEdit = false }: { isEdit?: boolean }) => (
@@ -256,7 +259,7 @@ export default function InventoryPage() {
             <FormItem>
                 <FormLabel>Initial Quantity</FormLabel>
                 <FormControl>
-                <Input type="number" {...field} />
+                <Input type="number" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} />
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -269,7 +272,7 @@ export default function InventoryPage() {
             <FormItem>
                 <FormLabel>Current Quantity</FormLabel>
                 <FormControl>
-                <Input type="number" {...field} />
+                <Input type="number" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} />
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -325,7 +328,7 @@ export default function InventoryPage() {
             <FormItem>
                 <FormLabel>Avg. Weight (kg)</FormLabel>
                 <FormControl>
-                <Input type="number" step="0.01" {...field} />
+                <Input type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -350,7 +353,7 @@ export default function InventoryPage() {
             name="totalCost"
             render={({ field }) => (
             <FormItem>
-                <FormLabel>Total Cost ($)</FormLabel>
+                <FormLabel>Total Cost</FormLabel>
                 <FormControl>
                 <Input type="number" step="0.01" {...field} readOnly={isEdit} />
                 </FormControl>
@@ -417,7 +420,7 @@ export default function InventoryPage() {
                                     <FormItem>
                                         <FormLabel>Number of Losses</FormLabel>
                                         <FormControl>
-                                            <Input type="number" placeholder="e.g., 5" {...field} />
+                                            <Input type="number" placeholder="e.g., 5" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>

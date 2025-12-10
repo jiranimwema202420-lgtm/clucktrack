@@ -95,6 +95,7 @@ export interface UserProfile {
   farmName?: string;
   farmLocation?: string;
   farmContact?: string;
+  currency?: string;
 }
 
     

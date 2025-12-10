@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -52,6 +53,7 @@ import { z } from 'zod';
 import { scanReceipt } from '@/ai/flows/scan-receipt';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Papa from 'papaparse';
+import { useCurrency } from '@/hooks/use-currency';
 
 
 export const dynamic = 'force-dynamic';
@@ -78,6 +80,7 @@ export default function ExpenditurePage() {
   
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
+  const { formatCurrency, currencySymbol } = useCurrency();
 
   const expendituresRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -236,7 +239,7 @@ export default function ExpenditurePage() {
         updateFlockTotals(values.flockId, amount, feedChange);
     }
 
-    toast({ title: 'Expenditure Recorded', description: `Recorded $${amount.toFixed(2)} for ${values.category}.` });
+    toast({ title: 'Expenditure Recorded', description: `Recorded ${formatCurrency(amount)} for ${values.category}.` });
     form.reset();
     setAddExpenseOpen(false);
   }
@@ -434,7 +437,7 @@ export default function ExpenditurePage() {
               <FormItem>
                   <FormLabel>Quantity</FormLabel>
                   <FormControl>
-                  <Input type="number" placeholder="e.g., 10" {...field} />
+                  <Input type="number" placeholder="e.g., 10" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} />
                   </FormControl>
                   <FormMessage />
               </FormItem>
@@ -445,9 +448,9 @@ export default function ExpenditurePage() {
               name="unitPrice"
               render={({ field }) => (
               <FormItem>
-                  <FormLabel>Unit Price ($)</FormLabel>
+                  <FormLabel>Unit Price ({currencySymbol})</FormLabel>
                   <FormControl>
-                  <Input type="number" step="0.01" placeholder="e.g., 25.00" {...field} />
+                  <Input type="number" step="0.01" placeholder="e.g., 25.00" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
                   </FormControl>
                   <FormMessage />
               </FormItem>
@@ -455,7 +458,7 @@ export default function ExpenditurePage() {
           />
         </div>
         <FormItem>
-            <FormLabel>Total Amount ($)</FormLabel>
+            <FormLabel>Total Amount ({currencySymbol})</FormLabel>
             <FormControl>
                 <Input type="text" readOnly value={calculatedAmount.toFixed(2)} className="font-semibold bg-muted" />
             </FormControl>
@@ -657,7 +660,7 @@ export default function ExpenditurePage() {
                         <TableRow key={index}>
                           <TableCell>{item.category}</TableCell>
                           <TableCell>{item.quantity}</TableCell>
-                          <TableCell>${item.unitPrice.toFixed(2)}</TableCell>
+                          <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
                           <TableCell>{format(item.expenditureDate, 'yyyy-MM-dd')}</TableCell>
                         </TableRow>
                       ))}
@@ -735,8 +738,8 @@ export default function ExpenditurePage() {
                     <TableCell>{expense.category}</TableCell>
                     <TableCell className="truncate max-w-xs">{expense.description}</TableCell>
                     <TableCell className="text-right">{expense.quantity}</TableCell>
-                    <TableCell className="text-right">${expense.unitPrice.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">${expense.amount.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(expense.unitPrice)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(expense.amount)}</TableCell>
                     <TableCell className="text-right">
                         <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={() => handleEditClick(expense)}>
                             <Pencil className="h-4 w-4" />
