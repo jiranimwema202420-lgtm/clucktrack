@@ -23,7 +23,6 @@ import {
   SidebarMenuButton,
   SidebarContent,
   SidebarGroup,
-  SidebarGroupLabel
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/logo';
 
@@ -78,8 +77,10 @@ export default function Nav() {
       </SidebarHeader>
       <SidebarContent className="p-2">
         {navGroups.map((group) => (
-            <SidebarGroup key={group.title}>
-                <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
+            <SidebarGroup key={group.title} className="p-2">
+                <div className="px-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 group-data-[collapsible=icon]:hidden">
+                    {group.title}
+                </div>
                 <SidebarMenu>
                     {group.items.map((item) => (
                         <SidebarMenuItem key={item.href}>
