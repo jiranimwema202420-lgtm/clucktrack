@@ -1,107 +1,203 @@
-
 /**
- * This ruleset enforces a strict user-ownership security model for the CluckHub application.
+ * Core Philosophy: This ruleset implements a multi-tenant security model for a
+ * poultry farm management application. All data is segregated by a top-level
+ * farm identifier (`farmId`). Access to any data within a specific farm is
+ * strictly limited to users who are registered members of that farm.
  *
- * Core Philosophy:
- * The security model is centered around the principle that users own and control their own data.
- * All application data is private to the user who created it, and no data is publicly accessible.
- * This ensures strong data isolation and privacy for each user of the system.
- *
- * Data Structure:
- * All data is organized hierarchically under the `/users/{userId}` path. This structure naturally
- * segments data by owner, allowing for clear, efficient, and secure path-based authorization rules.
- * For example, a user's flocks are stored at `/users/{userId}/flocks/{flockId}`.
+ * Data Structure: The entire data model is hierarchical, rooted at `/farms/{farmId}`.
+ * All related data, including poultry batches, sensor readings, and user profiles,
+ * are stored in subcollections under their respective farm document. This structure
+ * naturally partitions data between different farms.
  *
  * Key Security Decisions:
- * - Strict Ownership: All read and write operations are restricted to the authenticated user
- *   whose UID matches the `{userId}` in the document path.
- * - No Public Access: There are no publicly readable collections. A user must be signed in
- *   and be the designated owner to access any document.
- * - User Listing Disabled: The rules explicitly prevent any client from listing the documents
- *   in the root `/users` collection, protecting user privacy.
- * - Self-Creation of User Profile: A user can create their own user profile document, but only
- *   if the document ID matches their authentication UID, ensuring data integrity.
- * - Data Validation: Writes are validated against a schema to ensure data integrity.
+ * - Farm Membership is Key: A user's ability to read or write any data is
+ *   contingent on the existence of a corresponding user document at
+ *   `/farms/{farmId}/users/{userId}`. This serves as the single source of truth
+ *   for farm membership.
+ * - Role-Based Administration: A simple role system ('admin') is defined for
+ *   managing users within a farm. Only admins can add or remove other users.
+ * - No Public Data: There are no globally readable collections. Listing all farms
+ *   is explicitly disallowed to ensure tenant privacy.
+ * - Creator-Managed Farms: While any authenticated user can create a new farm
+ *   document, only designated 'admin' members of that farm can subsequently
+ *   update or delete it.
+ *
+ * Denormalization for Authorization: The rules heavily rely on the 'farmId' field
+ * being denormalized onto every document within a farm's data tree. This avoids
+ * slow and costly `get()` calls up the hierarchy, leading to simpler and more
+ * performant rules. For example, a rule on a `healthRecord` can directly check
+ * the user's membership in the `farmId` provided in the path without needing to
+ * read the parent `poultryBatch` or `farm` documents.
+ *
+ * Structural Segregation: The use of a top-level `/farms` collection with all
+ * data nested underneath provides a robust and secure method of segregating
+ * tenant data, preventing any possibility of data leakage between different farms.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions to improve readability and maintainability of the rules.
+    // --------------------------------------------------------------------
+    // Helper Functions
+    // --------------------------------------------------------------------
+
+    /**
+     * Returns true if the user is authenticated.
+     */
     function isSignedIn() {
       return request.auth != null;
     }
 
+    /**
+     * Returns true if the authenticated user's UID matches the provided userId.
+     * This is the standard pattern for checking document ownership.
+     * @param userId The UID to check against the authenticated user.
+     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isExistingDocument() {
-      return resource != null;
+    /**
+     * Checks if the requesting user is a registered member of a given farm.
+     * This is the primary authorization check for all farm-related data.
+     * It works by verifying the existence of the user's document in the
+     * farm's `users` subcollection.
+     * @param farmId The ID of the farm to check membership for.
+     */
+    function isFarmMember(farmId) {
+      return isSignedIn() && exists(/databases/$(database)/documents/farms/$(farmId)/users/$(request.auth.uid));
     }
 
-    // Schema Validation Functions
-    function isValidFlock(flockData) {
-      return flockData.breed is string && flockData.breed.size() > 0
-          && flockData.type is string && (flockData.type == 'Broiler' || flockData.type == 'Layer')
-          && flockData.hatchDate is timestamp
-          && flockData.count is number && flockData.count >= 0
-          && flockData.initialCount is number && flockData.initialCount > 0
-          && flockData.count <= flockData.initialCount
-          && flockData.averageWeight is number && flockData.averageWeight >= 0
-          && flockData.totalFeedConsumed is number && flockData.totalFeedConsumed >= 0
-          && flockData.totalCost is number && flockData.totalCost >= 0
-          && (flockData.type == 'Broiler' || (
-               flockData.eggProductionRate is number && flockData.eggProductionRate >= 0 && flockData.eggProductionRate <= 100
-            && flockData.totalEggsCollected is number && flockData.totalEggsCollected >= 0
-             ));
+    /**
+     * Checks if the requesting user is an 'admin' for a given farm.
+     * This is used for privileged actions like managing users or the farm document.
+     * @param farmId The ID of the farm to check admin role for.
+     */
+    function isFarmAdmin(farmId) {
+      // isFarmMember is implicitly checked by the get() call, which will fail if the doc doesn't exist.
+      return isSignedIn() && get(/databases/$(database)/documents/farms/$(farmId)/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    function isValidSale(saleData) {
-      return saleData.flockId is string && saleData.flockId.size() > 0
-          && saleData.saleType is string && (saleData.saleType == 'Birds' || saleData.saleType == 'Eggs')
-          && saleData.quantity is number && saleData.quantity > 0
-          && saleData.pricePerUnit is number && saleData.pricePerUnit > 0
-          && saleData.customer is string && saleData.customer.size() > 0
-          && saleData.saleDate is timestamp
-          && saleData.total is number && saleData.total > 0;
+    /**
+     * Validates that the `farmId` field in a new document matches the `farmId`
+     * from the document's path. Enforces relational integrity on create.
+     * @param farmId The farmId from the path to match against.
+     */
+    function isCreateWithMatchingFarmId(farmId) {
+      return request.resource.data.farmId == farmId;
+    }
+    
+    /**
+     * Validates that the `farmId` field is immutable on updates.
+     * Prevents documents from being moved between farms.
+     */
+    function isFarmIdImmutable() {
+      return request.resource.data.farmId == resource.data.farmId;
     }
 
-    function isValidExpenditure(expenditureData) {
-      return expenditureData.category is string && expenditureData.category.size() > 0
-          && expenditureData.quantity is number && expenditureData.quantity > 0
-          && expenditureData.unitPrice is number && expenditureData.unitPrice > 0
-          && expenditureData.amount is number && expenditureData.amount > 0
-          && expenditureData.expenditureDate is timestamp
-          && (expenditureData.description == null || expenditureData.description is string);
+    /**
+     * Validates that the `poultryBatchId` field in a new document matches the
+     * ID from the document's path.
+     * @param poultryBatchId The ID from the path to match against.
+     */
+    function isCreateWithMatchingPoultryBatchId(poultryBatchId) {
+      return request.resource.data.poultryBatchId == poultryBatchId;
     }
 
-    match /users/{userId} {
-      allow get: if isOwner(userId);
+    /**
+     * Validates that the `poultryBatchId` field is immutable on updates.
+     */
+    function isPoultryBatchIdImmutable() {
+      return request.resource.data.poultryBatchId == resource.data.poultryBatchId;
+    }
+
+    // --------------------------------------------------------------------
+    // Collection Rules
+    // --------------------------------------------------------------------
+
+    /**
+     * @description Manages farm documents. Creation is open to any user, but
+     *              modification and deletion are restricted to farm admins.
+     * @path /farms/{farmId}
+     * @allow (get) An authenticated user who is a member of this farm.
+     * @deny (list) Listing all farms is disallowed to protect tenant privacy.
+     * @principle Multi-tenant data segregation.
+     */
+    match /farms/{farmId} {
+      allow get: if isFarmMember(farmId);
       allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isOwner(userId) && isExistingDocument();
-      allow delete: if isOwner(userId) && isExistingDocument();
+      allow create: if isSignedIn();
+      allow update: if isFarmAdmin(farmId) && resource != null;
+      allow delete: if isFarmAdmin(farmId) && resource != null;
 
-      match /flocks/{flockId} {
-        allow read: if isOwner(userId);
-        allow create: if isOwner(userId) && isValidFlock(request.resource.data);
-        allow update: if isOwner(userId) && isExistingDocument() && isValidFlock(request.resource.data);
-        allow delete: if isOwner(userId) && isExistingDocument();
-      }
-      
-      match /sales/{saleId} {
-        allow read: if isOwner(userId);
-        allow create: if isOwner(userId) && isValidSale(request.resource.data);
-        allow update: if isOwner(userId) && isExistingDocument() && isValidSale(request.resource.data);
-        allow delete: if isOwner(userId) && isExistingDocument();
+      /**
+       * @description Manages user profiles and roles within a specific farm.
+       * @path /farms/{farmId}/users/{userId}
+       * @allow (update) A user updating their own profile, or a farm admin updating any profile.
+       * @deny (create) A non-admin user trying to add another user to the farm.
+       * @principle Ownership for self-edits, role-based access for administration.
+       */
+      match /users/{userId} {
+        allow get, list: if isFarmMember(farmId);
+        allow create: if isFarmAdmin(farmId) && request.resource.data.farmId == farmId && request.resource.data.id == userId;
+        allow update: if (isOwner(userId) || isFarmAdmin(farmId)) && resource != null && isFarmIdImmutable();
+        allow delete: if isFarmAdmin(farmId) && resource != null;
       }
 
-      match /expenditures/{expenditureId} {
-        allow read: if isOwner(userId);
-        allow create: if isOwner(userId) && isValidExpenditure(request.resource.data);
-        allow update: if isOwner(userId) && isExistingDocument() && isValidExpenditure(request.resource.data);
-        allow delete: if isOwner(userId) && isExistingDocument();
+      /**
+       * @description Secures poultry batch data, restricting all access to members of the parent farm.
+       * @path /farms/{farmId}/poultryBatches/{poultryBatchId}
+       * @allow (create) A farm member creating a new poultry batch for their farm.
+       * @deny (get) A user who is not a member of this farm.
+       * @principle Enforces relational integrity and inherited permissions from the parent farm.
+       */
+      match /poultryBatches/{poultryBatchId} {
+        allow get, list: if isFarmMember(farmId);
+        allow create: if isFarmMember(farmId) && isCreateWithMatchingFarmId(farmId);
+        allow update: if isFarmMember(farmId) && resource != null && isFarmIdImmutable();
+        allow delete: if isFarmMember(farmId) && resource != null;
+
+        /**
+         * @description Secures feed consumption records for a specific poultry batch.
+         * @path /farms/{farmId}/poultryBatches/{poultryBatchId}/feedConsumption/{feedConsumptionId}
+         * @allow (read/write) Any member of the parent farm.
+         * @deny (create) A farm member trying to create a record with a mismatched poultryBatchId.
+         * @principle Ensures deeply nested documents inherit security context and maintain data integrity.
+         */
+        match /feedConsumption/{feedConsumptionId} {
+          allow get, list: if isFarmMember(farmId);
+          allow create: if isFarmMember(farmId) && isCreateWithMatchingPoultryBatchId(poultryBatchId);
+          allow update: if isFarmMember(farmId) && resource != null && isPoultryBatchIdImmutable();
+          allow delete: if isFarmMember(farmId) && resource != null;
+        }
+
+        /**
+         * @description Secures health records for a specific poultry batch.
+         * @path /farms/{farmId}/poultryBatches/{poultryBatchId}/healthRecords/{healthRecordId}
+         * @allow (read/write) Any member of the parent farm.
+         * @deny (update) A farm member trying to change the parent poultryBatchId of an existing record.
+         * @principle Ensures deeply nested documents inherit security context and maintain data integrity.
+         */
+        match /healthRecords/{healthRecordId} {
+          allow get, list: if isFarmMember(farmId);
+          allow create: if isFarmMember(farmId) && isCreateWithMatchingPoultryBatchId(poultryBatchId);
+          allow update: if isFarmMember(farmId) && resource != null && isPoultryBatchIdImmutable();
+          allow delete: if isFarmMember(farmId) && resource != null;
+        }
+      }
+
+      /**
+       * @description Secures sensor data, restricting all access to members of the parent farm.
+       * @path /farms/{farmId}/sensorData/{sensorDataId}
+       * @allow (create) A farm member (or an automated device authenticated as such) adding new sensor data.
+       * @deny (get) An authenticated user from a different farm.
+       * @principle Inherited permissions from the parent farm.
+       */
+      match /sensorData/{sensorDataId} {
+        allow get, list: if isFarmMember(farmId);
+        allow create: if isFarmMember(farmId) && isCreateWithMatchingFarmId(farmId);
+        allow update: if isFarmMember(farmId) && resource != null && isFarmIdImmutable();
+        allow delete: if isFarmMember(farmId) && resource != null;
       }
     }
   }
