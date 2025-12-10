@@ -89,7 +89,9 @@ export default function SalesPage() {
   const [calculatedTotal, setCalculatedTotal] = useState(0);
 
   useEffect(() => {
-    const total = (watchQuantity || 0) * (watchPricePerUnit || 0);
+    const quantity = typeof watchQuantity === 'number' ? watchQuantity : 0;
+    const pricePerUnit = typeof watchPricePerUnit === 'number' ? watchPricePerUnit : 0;
+    const total = quantity * pricePerUnit;
     setCalculatedTotal(total);
   }, [watchQuantity, watchPricePerUnit]);
 

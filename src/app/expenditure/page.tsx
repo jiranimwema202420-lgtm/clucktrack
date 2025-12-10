@@ -84,7 +84,9 @@ export default function ExpenditurePage() {
   const [calculatedAmount, setCalculatedAmount] = useState(0);
 
   useEffect(() => {
-    const amount = (watchQuantity || 0) * (watchUnitPrice || 0);
+    const quantity = typeof watchQuantity === 'number' ? watchQuantity : 0;
+    const unitPrice = typeof watchUnitPrice === 'number' ? watchUnitPrice : 0;
+    const amount = quantity * unitPrice;
     setCalculatedAmount(amount);
     form.setValue('amount', amount, { shouldValidate: true });
   }, [watchQuantity, watchUnitPrice, form]);
@@ -195,7 +197,7 @@ export default function ExpenditurePage() {
               <FormItem>
                   <FormLabel>Quantity</FormLabel>
                   <FormControl>
-                  <Input type="number" placeholder="e.g., 10" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
+                  <Input type="number" placeholder="e.g., 10" {...field} />
                   </FormControl>
                   <FormMessage />
               </FormItem>
@@ -208,7 +210,7 @@ export default function ExpenditurePage() {
               <FormItem>
                   <FormLabel>Unit Price ($)</FormLabel>
                   <FormControl>
-                  <Input type="number" step="0.01" placeholder="e.g., 25.00" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
+                  <Input type="number" step="0.01" placeholder="e.g., 25.00" {...field} />
                   </FormControl>
                   <FormMessage />
               </FormItem>
