@@ -67,10 +67,11 @@ import { format, differenceInWeeks } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Flock } from '@/lib/types';
 import { flockSchema } from '@/lib/types';
-import { useFirebase, useCollection, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, Timestamp, doc } from 'firebase/firestore';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 import { z } from 'zod';
 import { useCurrency } from '@/hooks/use-currency';
+import { updateFlock, deleteFlock } from '@/services/flock.services';
 
 export const dynamic = 'force-dynamic';
 
@@ -122,12 +123,8 @@ export default function InventoryPage() {
 
   function onEditFlockSubmit(values: z.infer<typeof flockSchema>) {
     if (!user || !selectedFlock) return;
-    const flockDocRef = doc(firestore, 'users', user.uid, 'flocks', selectedFlock.id);
     
-    updateDocumentNonBlocking(flockDocRef, {
-        ...values,
-        hatchDate: Timestamp.fromDate(values.hatchDate)
-    });
+    updateFlock(firestore, user.uid, selectedFlock.id, values);
 
     toast({
         title: "Flock Updated",
@@ -158,11 +155,7 @@ export default function InventoryPage() {
     }
 
     const newCount = flock.count - values.count;
-    const flockDocRef = doc(firestore, 'users', user.uid, 'flocks', values.flockId);
-    
-    updateDocumentNonBlocking(flockDocRef, {
-        count: newCount
-    });
+    updateFlock(firestore, user.uid, values.flockId, { count: newCount });
 
     toast({
         title: "Loss Recorded",
@@ -191,9 +184,7 @@ export default function InventoryPage() {
         newEggProductionRate = (newTotalEggs / (daysSinceHatch * flock.count)) * 100;
     }
     
-    const flockDocRef = doc(firestore, 'users', user.uid, 'flocks', values.flockId);
-    
-    updateDocumentNonBlocking(flockDocRef, {
+    updateFlock(firestore, user.uid, values.flockId, { 
         totalEggsCollected: newTotalEggs,
         eggProductionRate: parseFloat(newEggProductionRate.toFixed(2))
     });
@@ -208,8 +199,7 @@ export default function InventoryPage() {
   
   function handleDeleteFlock(flockId: string) {
     if (!user) return;
-    const flockDocRef = doc(firestore, 'users', user.uid, 'flocks', flockId);
-    deleteDocumentNonBlocking(flockDocRef);
+    deleteFlock(firestore, user.uid, flockId);
     toast({
       title: "Flock Deleted",
       description: `Flock has been removed from the inventory.`,
@@ -246,7 +236,7 @@ export default function InventoryPage() {
   });
 
 
-  const getAgeInWeeks = (hatchDate: Timestamp) => {
+  const getAgeInWeeks = (hatchDate: any) => {
     if (!hatchDate) return 0;
     return differenceInWeeks(new Date(), hatchDate.toDate());
   };

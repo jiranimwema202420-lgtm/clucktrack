@@ -47,14 +47,15 @@ import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Calendar as CalendarIcon, Loader2, Trash2, Pencil, ScanLine, Camera, X, Upload } from 'lucide-react';
 import type { Expenditure, Flock } from '@/lib/types';
 import { expenditureSchema } from '@/lib/types';
-import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, Timestamp, doc } from 'firebase/firestore';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 import { z } from 'zod';
 import { scanReceipt } from '@/ai/flows/scan-receipt';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Papa from 'papaparse';
 import { useCurrency } from '@/hooks/use-currency';
-
+import { addExpenditure, updateExpenditure, deleteExpenditure, importExpenditures } from '@/services/expenditure.services';
+import { addFlock, updateFlockTotals } from '@/services/flock.services';
 
 export const dynamic = 'force-dynamic';
 
@@ -196,24 +197,8 @@ export default function ExpenditurePage() {
     }
   };
 
-
-  async function updateFlockTotals(flockId: string, amountChange: number, feedChange: number) {
-    if (!user || !flocks) return;
-    const flockToUpdate = flocks.find(f => f.id === flockId);
-    if (!flockToUpdate) return;
-    
-    const flockDocRef = doc(firestore, 'users', user.uid, 'flocks', flockId);
-    const newTotalCost = (flockToUpdate.totalCost || 0) + amountChange;
-    const newTotalFeed = (flockToUpdate.totalFeedConsumed || 0) + feedChange;
-
-    await updateDocumentNonBlocking(flockDocRef, {
-        totalCost: newTotalCost,
-        totalFeedConsumed: newTotalFeed,
-    });
-  }
-
   function onSubmit(values: z.infer<typeof expenditureSchema>) {
-    if (!expendituresRef || !user || !flocksRef) return;
+    if (!user || !flocksRef) return;
 
     const amount = values.quantity * values.unitPrice;
     if (amount <= 0) {
@@ -227,28 +212,15 @@ export default function ExpenditurePage() {
     }
 
     if (values.category === 'Day Old Chicks') {
-        const newFlock = {
-            breed: values.description || 'Unknown Breed',
-            type: 'Broiler',
-            count: values.quantity,
-            initialCount: values.quantity,
-            hatchDate: Timestamp.fromDate(values.expenditureDate),
-            averageWeight: 0.1,
-            totalFeedConsumed: 0,
-            totalCost: amount,
-            eggProductionRate: 0,
-            totalEggsCollected: 0,
-        };
-        addDocumentNonBlocking(flocksRef, newFlock);
+        addFlock(firestore, user.uid, values);
         toast({ title: 'New Flock Created', description: `A new flock of ${values.quantity} chicks has been added to your inventory.` });
     }
     
-    const newExpenditure = { ...values, expenditureDate: Timestamp.fromDate(values.expenditureDate), amount: amount };
-    addDocumentNonBlocking(expendituresRef, newExpenditure);
+    addExpenditure(firestore, user.uid, values);
 
     if (values.flockId && values.category !== 'Day Old Chicks') {
         const feedChange = values.category === 'Feed' ? values.quantity : 0;
-        updateFlockTotals(values.flockId, amount, feedChange);
+        updateFlockTotals(firestore, user.uid, values.flockId, amount, feedChange);
     }
 
     toast({ title: 'Expenditure Recorded', description: `Recorded ${formatCurrency(amount)} for ${values.category}.` });
@@ -257,30 +229,32 @@ export default function ExpenditurePage() {
   }
 
   function onEditSubmit(values: z.infer<typeof expenditureSchema>) {
-    if (!user || !selectedExpense) return;
+    if (!user || !selectedExpense || !flocks) return;
     const amount = values.quantity * values.unitPrice;
     if (amount <= 0) {
       toast({ variant: "destructive", title: "Invalid Amount", description: "Total amount must be greater than zero." });
       return;
     }
-    const expenditureDocRef = doc(firestore, 'users', user.uid, 'expenditures', selectedExpense.id);
-    const updatedExpenditure = { ...values, expenditureDate: Timestamp.fromDate(values.expenditureDate), amount: amount };
-    updateDocumentNonBlocking(expenditureDocRef, updatedExpenditure);
+
+    updateExpenditure(firestore, user.uid, selectedExpense.id, values);
 
     const amountDifference = amount - selectedExpense.amount;
     const oldFeedAmount = selectedExpense.category === 'Feed' ? selectedExpense.quantity : 0;
     const newFeedAmount = values.category === 'Feed' ? values.quantity : 0;
     const feedDifference = newFeedAmount - oldFeedAmount;
     
+    const originalFlock = flocks.find(f => f.id === selectedExpense.flockId);
+
     if (selectedExpense.flockId && selectedExpense.flockId !== values.flockId) {
-        updateFlockTotals(selectedExpense.flockId, -selectedExpense.amount, -oldFeedAmount);
+        if(originalFlock) {
+            updateFlockTotals(firestore, user.uid, selectedExpense.flockId, -selectedExpense.amount, -oldFeedAmount);
+        }
     }
     if (values.flockId) {
         const flockAmountChange = selectedExpense.flockId === values.flockId ? amountDifference : amount;
         const flockFeedChange = selectedExpense.flockId === values.flockId ? feedDifference : newFeedAmount;
-        updateFlockTotals(values.flockId, flockAmountChange, flockFeedChange);
+        updateFlockTotals(firestore, user.uid, values.flockId, flockAmountChange, flockFeedChange);
     }
-
 
     toast({ title: "Expenditure Updated", description: "The expenditure record has been updated." });
     setEditExpenseOpen(false);
@@ -288,13 +262,15 @@ export default function ExpenditurePage() {
   }
 
   function handleDeleteExpenditure(expense: Expenditure) {
-    if (!user) return;
-    const expenditureDocRef = doc(firestore, 'users', user.uid, 'expenditures', expense.id);
-    deleteDocumentNonBlocking(expenditureDocRef);
+    if (!user || !flocks) return;
+    deleteExpenditure(firestore, user.uid, expense.id);
 
     if (expense.flockId) {
-        const feedChange = expense.category === 'Feed' ? expense.quantity : 0;
-        updateFlockTotals(expense.flockId, -expense.amount, -feedChange);
+        const flock = flocks.find(f => f.id === expense.flockId);
+        if (flock) {
+            const feedChange = expense.category === 'Feed' ? expense.quantity : 0;
+            updateFlockTotals(firestore, user.uid, expense.flockId, -expense.amount, -feedChange);
+        }
     }
 
     toast({ title: "Expenditure Deleted", description: "The expenditure record has been deleted.", variant: "destructive" });
@@ -364,19 +340,10 @@ export default function ExpenditurePage() {
   };
   
   const handleImport = async () => {
-    if (!expendituresRef || !user) return;
+    if (!user || !flocks) return;
     setIsImporting(true);
 
-    for (const item of parsedData) {
-        const amount = item.quantity * item.unitPrice;
-        const newExpenditure = { ...item, expenditureDate: Timestamp.fromDate(item.expenditureDate), amount: amount };
-        addDocumentNonBlocking(expendituresRef, newExpenditure);
-
-        if (item.flockId) {
-            const feedChange = item.category === 'Feed' ? item.quantity : 0;
-            await updateFlockTotals(item.flockId, amount, feedChange);
-        }
-    }
+    await importExpenditures(firestore, user.uid, parsedData, flocks);
 
     toast({ title: 'Import Successful', description: `${parsedData.length} expenditures have been imported.` });
     setIsImporting(false);
