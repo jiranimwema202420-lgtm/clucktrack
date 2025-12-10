@@ -35,7 +35,7 @@ import {
     DialogFooter,
     DialogClose
 } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -213,7 +213,7 @@ export default function ExpenditurePage() {
   }
 
   function onSubmit(values: z.infer<typeof expenditureSchema>) {
-    if (!expendituresRef || !user) return;
+    if (!expendituresRef || !user || !flocksRef) return;
 
     const amount = values.quantity * values.unitPrice;
     if (amount <= 0) {
@@ -225,11 +225,28 @@ export default function ExpenditurePage() {
         toast({ variant: "destructive", title: "Flock Required", description: "Please select a flock for this expenditure category." });
         return;
     }
+
+    if (values.category === 'Day Old Chicks') {
+        const newFlock = {
+            breed: values.description || 'Unknown Breed',
+            type: 'Broiler',
+            count: values.quantity,
+            initialCount: values.quantity,
+            hatchDate: Timestamp.fromDate(values.expenditureDate),
+            averageWeight: 0.1,
+            totalFeedConsumed: 0,
+            totalCost: amount,
+            eggProductionRate: 0,
+            totalEggsCollected: 0,
+        };
+        addDocumentNonBlocking(flocksRef, newFlock);
+        toast({ title: 'New Flock Created', description: `A new flock of ${values.quantity} chicks has been added to your inventory.` });
+    }
     
     const newExpenditure = { ...values, expenditureDate: Timestamp.fromDate(values.expenditureDate), amount: amount };
     addDocumentNonBlocking(expendituresRef, newExpenditure);
 
-    if (values.flockId) {
+    if (values.flockId && values.category !== 'Day Old Chicks') {
         const feedChange = values.category === 'Feed' ? values.quantity : 0;
         updateFlockTotals(values.flockId, amount, feedChange);
     }
@@ -467,6 +484,11 @@ export default function ExpenditurePage() {
                 <FormControl>
                 <Textarea placeholder="e.g., Monthly electricity bill" {...field} />
                 </FormControl>
+                 {watchCategory === 'Day Old Chicks' && (
+                    <FormDescription>
+                        Enter the breed of the chicks here (e.g., "Cobb 500"). This will be used as the flock name.
+                    </FormDescription>
+                )}
                 <FormMessage />
             </FormItem>
             )}
