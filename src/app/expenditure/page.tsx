@@ -58,7 +58,6 @@ export default function ExpenditurePage() {
   const [isAddExpenseOpen, setAddExpenseOpen] = useState(false);
   const [isEditExpenseOpen, setEditExpenseOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<Expenditure | null>(null);
-  const [isAddFlockOpen, setAddFlockOpen] = useState(false);
   
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
@@ -119,20 +118,6 @@ export default function ExpenditurePage() {
 
   function onSubmit(values: z.infer<typeof expenditureSchema>) {
     if (!expendituresRef || !user) return;
-    
-    if (values.category === 'Day Old Chicks') {
-        // Trigger Add Flock dialog instead of creating an expense
-        // You might want to pass some data to the Add Flock form
-        toast({
-            title: "New Flock Detected",
-            description: "Please enter the details for your new flock of chicks.",
-        });
-        setAddExpenseOpen(false); // Close expense dialog
-        setAddFlockOpen(true); // Open flock dialog
-        // Pre-fill flock form if you have another form instance for it.
-        // For now, we just open the dialog.
-        return;
-    }
 
     const amount = values.quantity * values.unitPrice;
     if (amount <= 0) {
@@ -273,7 +258,7 @@ export default function ExpenditurePage() {
               <FormItem>
                   <FormLabel>Quantity</FormLabel>
                   <FormControl>
-                  <Input type="number" placeholder="e.g., 10" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} />
+                  <Input type="number" placeholder="e.g., 10" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
                   </FormControl>
                   <FormMessage />
               </FormItem>
@@ -385,24 +370,6 @@ export default function ExpenditurePage() {
                 </Form>
             </DialogContent>
        </Dialog>
-        
-        {/* Dummy Add Flock Dialog, assuming you have one in inventory page that can be opened */}
-        <Dialog open={isAddFlockOpen} onOpenChange={setAddFlockOpen}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Add New Flock</DialogTitle>
-                    <DialogDescription>
-                        This would be your new flock form. For now, this is a placeholder.
-                        The real 'Add Flock' dialog lives on the Inventory page.
-                        This was triggered from recording a 'Day Old Chicks' expense.
-                    </DialogDescription>
-                </DialogHeader>
-                 <DialogFooter className="mt-4">
-                    <DialogClose asChild><Button variant="secondary" type="button" onClick={() => setAddFlockOpen(false)}>Close</Button></DialogClose>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-
 
        <Dialog open={isEditExpenseOpen} onOpenChange={setEditExpenseOpen}>
             <DialogContent>
