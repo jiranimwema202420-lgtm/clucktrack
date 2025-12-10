@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -26,7 +27,7 @@ const ScanReceiptOutputSchema = z.object({
   unitPrice: z.number().describe('The price per unit. If not available, calculate from total amount and quantity.'),
   amount: z.number().describe('The total amount of the expenditure. This is the most important field.'),
   description: z.string().describe('A brief summary of items purchased. (e.g., "50kg Broiler Feed, 1x Vet-service").'),
-  expenditureDate: z.string().format('date').describe('The date of the expenditure in YYYY-MM-DD format.'),
+  expenditureDate: z.string().describe('The date of the expenditure in YYYY-MM-DD format.'),
 });
 export type ScanReceiptOutput = z.infer<typeof ScanReceiptOutputSchema>;
 
