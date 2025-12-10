@@ -101,79 +101,14 @@ service cloud.firestore {
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
 
-      /**
-       * @description A user's collection of poultry batches.
-       * @path /users/{userId}/batches/{batchId}
-       * @allow (create) The owner can create a new batch in their own collection.
-       * @deny (get) Another user cannot read the owner's batch data.
-       * @principle Enforces strict ownership for all nested user data.
-       */
-      match /batches/{batchId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId);
-        allow update: if isExistingOwner(userId);
-        allow delete: if isExistingOwner(userId);
-
-        /**
-         * @description Individual poultry records within a batch.
-         * @path /users/{userId}/batches/{batchId}/poultry/{poultryId}
-         * @allow (create) The owner can add a poultry record to their own batch.
-         * @deny (update) Another user cannot update a poultry record.
-         * @principle Validates relational integrity between a parent batch and a child poultry record.
-         */
-        match /poultry/{poultryId} {
-          allow get: if isOwner(userId);
-          allow list: if isOwner(userId);
-          allow create: if isOwner(userId) && request.resource.data.batchId == batchId;
-          allow update: if isExistingOwner(userId) && request.resource.data.batchId == resource.data.batchId;
-          allow delete: if isExistingOwner(userId);
-        }
-
-        /**
-         * @description Feed consumption records for a specific batch.
-         * @path /users/{userId}/batches/{batchId}/feedConsumption/{feedConsumptionId}
-         * @allow (create) The owner can add a feed consumption record to their own batch.
-         * @deny (create) The owner cannot create a record with a mismatched batchId.
-         * @principle Validates relational integrity between a parent batch and a child consumption record.
-         */
-        match /feedConsumption/{feedConsumptionId} {
-          allow get: if isOwner(userId);
-          allow list: if isOwner(userId);
-          allow create: if isOwner(userId) && request.resource.data.batchId == batchId;
-          allow update: if isExistingOwner(userId) && request.resource.data.batchId == resource.data.batchId;
-          allow delete: if isExistingOwner(userId);
-        }
-
-        /**
-         * @description System alerts associated with a specific batch.
-         * @path /users/{userId}/batches/{batchId}/alerts/{alertId}
-         * @allow (list) The owner can list all alerts for their batch.
-         * @deny (delete) Another user cannot delete an alert from the owner's batch.
-         * @principle Validates relational integrity between a parent batch and a child alert.
-         */
-        match /alerts/{alertId} {
-          allow get: if isOwner(userId);
-          allow list: if isOwner(userId);
-          allow create: if isOwner(userId) && request.resource.data.batchId == batchId;
-          allow update: if isExistingOwner(userId) && request.resource.data.batchId == resource.data.batchId;
-          allow delete: if isExistingOwner(userId);
-        }
+      match /flocks/{flockId} {
+        allow get, list, create, update, delete: if isOwner(userId);
       }
-
-      /**
-       * @description IoT sensor data owned by the user.
-       * @path /users/{userId}/sensorData/{sensorDataId}
-       * @allow (get) The owner can read their own sensor data.
-       * @deny (list) Another user cannot list the owner's sensor data.
-       * @principle Enforces strict ownership for all user data.
-       */
-      match /sensorData/{sensorDataId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId);
-        allow update: if isExistingOwner(userId);
-        allow delete: if isExistingOwner(userId);
+      match /sales/{saleId} {
+        allow get, list, create, update, delete: if isOwner(userId);
+      }
+      match /expenditures/{expenditureId} {
+        allow get, list, create, update, delete: if isOwner(userId);
       }
     }
 
