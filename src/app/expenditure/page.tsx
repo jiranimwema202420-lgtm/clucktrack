@@ -59,7 +59,7 @@ import { useCurrency } from '@/hooks/use-currency';
 export const dynamic = 'force-dynamic';
 
 const expenditureCategories = ['Feed', 'Medicine', 'Utilities', 'Labor', 'Equipment', 'Maintenance', 'Day Old Chicks', 'Other'];
-const flockRelatedCategories = ['Feed', 'Medicine', 'Maintenance', 'Day Old Chicks'];
+const flockRelatedCategories = ['Feed', 'Medicine', 'Maintenance'];
 
 type ParsedExpenditure = z.infer<typeof expenditureSchema>;
 
@@ -228,12 +228,13 @@ export default function ExpenditurePage() {
       return;
     }
 
+    if (values.category === 'Day Old Chicks') {
+        setAddExpenseOpen(false);
+        setAddFlockFromExpenseOpen(true);
+        return;
+    }
+
     if (flockRelatedCategories.includes(values.category) && !values.flockId) {
-        if (values.category === 'Day Old Chicks') {
-            setAddExpenseOpen(false);
-            setAddFlockFromExpenseOpen(true);
-            return;
-        }
         toast({ variant: "destructive", title: "Flock Required", description: "Please select a flock for this expenditure category." });
         return;
     }
@@ -417,10 +418,10 @@ export default function ExpenditurePage() {
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Assign to Flock</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={watchCategory === 'Day Old Chicks'}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                         <SelectTrigger disabled={isLoadingFlocks}>
-                        <SelectValue placeholder={watchCategory === 'Day Old Chicks' ? "Creates a new flock" : "Select a flock"} />
+                        <SelectValue placeholder="Select a flock" />
                         </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -706,7 +707,7 @@ export default function ExpenditurePage() {
             </DialogContent>
        </Dialog>
         
-        <Dialog open={isAddFlockFromExpenseOpen} onOpenChange={setAddFlockFromExpenseOpen}>
+        <AlertDialog open={isAddFlockFromExpenseOpen} onOpenChange={setAddFlockFromExpenseOpen}>
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>Create New Flock?</AlertDialogTitle>
@@ -728,7 +729,7 @@ export default function ExpenditurePage() {
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
-        </Dialog>
+        </AlertDialog>
 
 
       <div className="lg:col-span-2">
