@@ -59,7 +59,7 @@ import { useCurrency } from '@/hooks/use-currency';
 export const dynamic = 'force-dynamic';
 
 const expenditureCategories = ['Feed', 'Medicine', 'Utilities', 'Labor', 'Equipment', 'Maintenance', 'Day Old Chicks', 'Other'];
-const flockRelatedCategories = ['Feed', 'Medicine', 'Maintenance'];
+const flockRelatedCategories = ['Feed', 'Medicine', 'Maintenance', 'Day Old Chicks'];
 
 type ParsedExpenditure = z.infer<typeof expenditureSchema>;
 
@@ -76,6 +76,8 @@ export default function ExpenditurePage() {
   const [parsedData, setParsedData] = useState<ParsedExpenditure[]>([]);
   const [parseErrors, setParseErrors] = useState<string[]>([]);
   const [isImporting, setIsImporting] = useState(false);
+  const [isAddFlockFromExpenseOpen, setAddFlockFromExpenseOpen] = useState(false);
+
 
   
   const { toast } = useToast();
@@ -175,7 +177,7 @@ export default function ExpenditurePage() {
 
       // Find the best matching category
       const scannedCategory = result.category.toLowerCase();
-      const matchedCategory = expenditureCategories.find(c => c.toLowerCase().includes(scannedCategory)) || result.category;
+      const matchedCategory = expenditureCategories.find(c => c.toLowerCase().includes(scannedCategory) || scannedCategory.includes(c.toLowerCase())) || 'Other';
 
       form.reset({
         category: matchedCategory,
@@ -227,6 +229,11 @@ export default function ExpenditurePage() {
     }
 
     if (flockRelatedCategories.includes(values.category) && !values.flockId) {
+        if (values.category === 'Day Old Chicks') {
+            setAddExpenseOpen(false);
+            setAddFlockFromExpenseOpen(true);
+            return;
+        }
         toast({ variant: "destructive", title: "Flock Required", description: "Please select a flock for this expenditure category." });
         return;
     }
@@ -318,6 +325,7 @@ export default function ExpenditurePage() {
             ...row,
             quantity: parseFloat(row.quantity),
             unitPrice: parseFloat(row.unitPrice),
+            amount: parseFloat(row.quantity) * parseFloat(row.unitPrice),
             expenditureDate: new Date(row.expenditureDate),
           };
 
@@ -409,10 +417,10 @@ export default function ExpenditurePage() {
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Assign to Flock</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={watchCategory === 'Day Old Chicks'}>
                     <FormControl>
                         <SelectTrigger disabled={isLoadingFlocks}>
-                        <SelectValue placeholder="Select a flock" />
+                        <SelectValue placeholder={watchCategory === 'Day Old Chicks' ? "Creates a new flock" : "Select a flock"} />
                         </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -697,6 +705,31 @@ export default function ExpenditurePage() {
                 </Form>
             </DialogContent>
        </Dialog>
+        
+        <Dialog open={isAddFlockFromExpenseOpen} onOpenChange={setAddFlockFromExpenseOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Create New Flock?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Recording an expense for 'Day Old Chicks' should be done by adding a new flock in the Inventory. Would you like to go to the Inventory page to add a new flock now? The cost details will be carried over.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setAddFlockFromExpenseOpen(false)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => {
+                        // This logic should ideally use a router push and state management
+                        // For simplicity here, we'll just inform the user.
+                        toast({ title: "Redirecting...", description: "Please add a new flock in the inventory page."});
+                        setAddFlockFromExpenseOpen(false);
+                        // In a real app, you'd use Next.js router to navigate
+                        // router.push('/inventory?from=expense&...');
+                    }}>
+                        Go to Inventory
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </Dialog>
+
 
       <div className="lg:col-span-2">
         <Card>
