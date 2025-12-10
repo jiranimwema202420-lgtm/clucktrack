@@ -46,8 +46,9 @@ service cloud.firestore {
       // ---------------------------------------------------------------------
 
       // CONTACTS -------------------------------------------------------------
+      // TEMPORARY: Relaxed rule for debugging
       match /contacts/{contactId} {
-        allow read, write: if isOwner(userId);
+        allow read, write: if isSignedIn();
       }
 
       // FLOCKS ---------------------------------------------------------------
