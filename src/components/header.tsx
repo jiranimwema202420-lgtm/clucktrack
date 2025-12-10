@@ -1,3 +1,4 @@
+
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
@@ -31,7 +32,8 @@ const pathToTitle: { [key: string]: string } = {
   '/feed-optimization': 'AI Feed Optimizer',
   '/health-prediction': 'AI Health Predictor',
   '/poultry-qa': 'Poultry Q&A',
-  '/settings': 'Settings'
+  '/settings': 'Settings',
+  '/help': 'Help & Getting Started'
 };
 
 export default function Header() {

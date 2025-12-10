@@ -14,7 +14,8 @@ import {
   FileOutput,
   MessageSquare,
   Settings,
-  Egg
+  Egg,
+  LifeBuoy
 } from 'lucide-react';
 import {
   SidebarHeader,
@@ -36,6 +37,7 @@ const navItems = [
   { href: '/health-prediction', label: 'Health AI', icon: HeartPulse },
   { href: '/poultry-qa', label: 'Poultry Q&A', icon: MessageSquare },
   { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/help', label: 'Help', icon: LifeBuoy },
 ];
 
 export default function Nav() {
