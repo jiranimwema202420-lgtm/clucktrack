@@ -2,10 +2,12 @@
 import { z } from 'zod';
 import { Timestamp } from 'firebase/firestore';
 
-export type SensorData = {
+export interface SensorData {
+  id?: string;
   temperature: number;
   humidity: number;
   ammoniaLevel: number; // in ppm
+  timestamp: Timestamp;
 };
 
 export type Kpi = {

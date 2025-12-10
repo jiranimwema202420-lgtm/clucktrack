@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -12,14 +13,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { StatsCard } from '@/components/dashboard/stats-card';
-import { mockSensorData } from '@/lib/data';
 import { Wheat, Users, BrainCircuit, ArrowRight, Loader2, Scale, Egg } from 'lucide-react';
 import Link from 'next/link';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
-import type { Flock } from '@/lib/types';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
+import type { Flock, SensorData } from '@/lib/types';
 import { HeartPulse } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { addSensorData } from '@/services/sensor.services';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,12 +36,51 @@ const flockGrowthData = [
 
 export default function DashboardPage() {
   const { firestore, user } = useFirebase();
+  const { toast } = useToast();
+  
+  // State for sliders
+  const [temperature, setTemperature] = useState(24);
+  const [humidity, setHumidity] = useState(60);
+  const [ammoniaLevel, setAmmoniaLevel] = useState(15);
+  
   const flocksRef = useMemoFirebase(() => {
     if (!user) return null;
     return collection(firestore, 'users', user.uid, 'flocks');
   }, [firestore, user]);
-  const { data: flocks, isLoading } = useCollection<Flock>(flocksRef);
+  const { data: flocks, isLoading: isLoadingFlocks } = useCollection<Flock>(flocksRef);
+
+  const sensorDataRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, 'users', user.uid, 'sensorData'), orderBy('timestamp', 'desc'), limit(1));
+  }, [firestore, user]);
+  const { data: sensorData, isLoading: isLoadingSensor } = useCollection<SensorData>(sensorDataRef);
+
+  const latestSensorData = sensorData?.[0];
+
+  useEffect(() => {
+    if (latestSensorData) {
+      setTemperature(latestSensorData.temperature);
+      setHumidity(latestSensorData.humidity);
+      setAmmoniaLevel(latestSensorData.ammoniaLevel);
+    }
+  }, [latestSensorData]);
   
+  const handleApplyChanges = () => {
+    if (!user) return;
+    const newSensorData = {
+      temperature,
+      humidity,
+      ammoniaLevel,
+    };
+    addSensorData(firestore, user.uid, newSensorData);
+    toast({
+      title: 'Settings Applied',
+      description: 'New environmental settings have been saved.',
+    });
+  }
+
+  const isLoading = isLoadingFlocks || isLoadingSensor;
+
   const broilerFlocks = flocks?.filter(f => f.type === 'Broiler') || [];
   const layerFlocks = flocks?.filter(f => f.type === 'Layer') || [];
 
@@ -145,27 +186,27 @@ export default function DashboardPage() {
                     <div className="space-y-3">
                         <div className="flex justify-between items-baseline">
                             <label className="text-sm font-medium">Temperature</label>
-                            <span className="font-bold text-lg text-primary">{mockSensorData.temperature}°C</span>
+                            <span className="font-bold text-lg text-primary">{temperature}°C</span>
                         </div>
-                        <Slider defaultValue={[mockSensorData.temperature]} max={40} step={1} />
+                        <Slider value={[temperature]} onValueChange={(vals) => setTemperature(vals[0])} max={40} step={1} />
                     </div>
                      <div className="space-y-3">
                         <div className="flex justify-between items-baseline">
                             <label className="text-sm font-medium">Humidity</label>
-                            <span className="font-bold text-lg text-primary">{mockSensorData.humidity}%</span>
+                            <span className="font-bold text-lg text-primary">{humidity}%</span>
                         </div>
-                        <Slider defaultValue={[mockSensorData.humidity]} max={100} step={1} />
+                        <Slider value={[humidity]} onValueChange={(vals) => setHumidity(vals[0])} max={100} step={1} />
                     </div>
                      <div className="space-y-3">
                         <div className="flex justify-between items-baseline">
                             <label className="text-sm font-medium">Ventilation (Ammonia)</label>
-                            <span className="font-bold text-lg text-primary">{mockSensorData.ammoniaLevel} ppm</span>
+                            <span className="font-bold text-lg text-primary">{ammoniaLevel} ppm</span>
                         </div>
-                        <Slider defaultValue={[mockSensorData.ammoniaLevel]} max={50} step={1} />
+                        <Slider value={[ammoniaLevel]} onValueChange={(vals) => setAmmoniaLevel(vals[0])} max={50} step={1} />
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <Button className="w-full">Apply Changes</Button>
+                    <Button className="w-full" onClick={handleApplyChanges}>Apply Changes</Button>
                 </CardFooter>
             </Card>
         </div>
