@@ -42,7 +42,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Calendar as CalendarIcon, Loader2, Trash2, Pencil, ScanLine, Camera, X } from 'lucide-react';
+import { PlusCircle, Calendar as CalendarIcon, Loader2, Trash2, Pencil, ScanLine, Camera, X, Upload } from 'lucide-react';
 import type { Expenditure, Flock } from '@/lib/types';
 import { expenditureSchema } from '@/lib/types';
 import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
@@ -50,12 +50,15 @@ import { collection, Timestamp, doc } from 'firebase/firestore';
 import { z } from 'zod';
 import { scanReceipt } from '@/ai/flows/scan-receipt';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import Papa from 'papaparse';
 
 
 export const dynamic = 'force-dynamic';
 
 const expenditureCategories = ['Feed', 'Medicine', 'Utilities', 'Labor', 'Equipment', 'Maintenance', 'Day Old Chicks', 'Other'];
 const flockRelatedCategories = ['Feed', 'Medicine', 'Maintenance'];
+
+type ParsedExpenditure = z.infer<typeof expenditureSchema>;
 
 export default function ExpenditurePage() {
   const [isAddExpenseOpen, setAddExpenseOpen] = useState(false);
@@ -66,6 +69,11 @@ export default function ExpenditurePage() {
   const [isScanning, setIsScanning] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isImportModalOpen, setImportModalOpen] = useState(false);
+  const [parsedData, setParsedData] = useState<ParsedExpenditure[]>([]);
+  const [parseErrors, setParseErrors] = useState<string[]>([]);
+  const [isImporting, setIsImporting] = useState(false);
+
   
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
@@ -287,6 +295,82 @@ export default function ExpenditurePage() {
     setEditExpenseOpen(true);
   }
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setParsedData([]);
+    setParseErrors([]);
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const validatedData: ParsedExpenditure[] = [];
+        const errors: string[] = [];
+
+        results.data.forEach((row: any, index) => {
+          const parsedRow = {
+            ...row,
+            quantity: parseFloat(row.quantity),
+            unitPrice: parseFloat(row.unitPrice),
+            expenditureDate: new Date(row.expenditureDate),
+          };
+
+          const validation = expenditureSchema.safeParse(parsedRow);
+          if (validation.success) {
+            validatedData.push(validation.data);
+          } else {
+            const errorMessages = validation.error.errors.map(e => `Row ${index + 2}: ${e.path.join('.')} - ${e.message}`).join(', ');
+            errors.push(errorMessages);
+          }
+        });
+        
+        setParsedData(validatedData);
+        setParseErrors(errors);
+      },
+      error: (error) => {
+        setParseErrors([`CSV parsing error: ${error.message}`]);
+      },
+    });
+  };
+
+  const handleDownloadTemplate = () => {
+    const headers = "category,quantity,unitPrice,description,expenditureDate,flockId";
+    const templateData = "Feed,50,25.50,50kg Broiler Feed,2023-10-26,your_flock_id_here\nMedicine,10,5.00,Vaccines,,";
+    const csvContent = `data:text/csv;charset=utf-8,${headers}\n${templateData}`;
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "expenditure_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
+  const handleImport = async () => {
+    if (!expendituresRef || !user) return;
+    setIsImporting(true);
+
+    for (const item of parsedData) {
+        const amount = item.quantity * item.unitPrice;
+        const newExpenditure = { ...item, expenditureDate: Timestamp.fromDate(item.expenditureDate), amount: amount };
+        addDocumentNonBlocking(expendituresRef, newExpenditure);
+
+        if (item.flockId) {
+            const feedChange = item.category === 'Feed' ? item.quantity : 0;
+            await updateFlockTotals(item.flockId, amount, feedChange);
+        }
+    }
+
+    toast({ title: 'Import Successful', description: `${parsedData.length} expenditures have been imported.` });
+    setIsImporting(false);
+    setImportModalOpen(false);
+    setParsedData([]);
+    setParseErrors([]);
+  };
+
+
   const FormFields = () => (
     <div className="space-y-4">
         <FormField
@@ -444,6 +528,10 @@ export default function ExpenditurePage() {
                 <ScanLine className="mr-2 h-4 w-4" />
                 Scan Receipt
             </Button>
+            <Button variant="outline" className="w-full" onClick={() => setImportModalOpen(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Import CSV
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -516,6 +604,77 @@ export default function ExpenditurePage() {
           </DialogFooter>
         </DialogContent>
        </Dialog>
+
+       <Dialog open={isImportModalOpen} onOpenChange={setImportModalOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Import Expenditures from CSV</DialogTitle>
+            <DialogDescription>
+              Upload a CSV file with your expenditures. Ensure it matches the template format.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex gap-4">
+              <Button asChild variant="secondary" className="flex-1">
+                <label htmlFor="csv-upload" className="cursor-pointer">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Choose CSV File
+                </label>
+              </Button>
+              <Input id="csv-upload" type="file" accept=".csv" className="hidden" onChange={handleFileChange} />
+              <Button variant="outline" onClick={handleDownloadTemplate} className="flex-1">
+                Download Template
+              </Button>
+            </div>
+            {parseErrors.length > 0 && (
+              <Alert variant="destructive">
+                <AlertTitle>Validation Errors</AlertTitle>
+                <AlertDescription>
+                  <ul className="list-disc pl-5 max-h-32 overflow-y-auto">
+                    {parseErrors.map((error, index) => (
+                      <li key={index}>{error}</li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
+            {parsedData.length > 0 && (
+              <div>
+                <h3 className="mb-2 font-semibold">Preview Data ({parsedData.length} records)</h3>
+                <div className="max-h-64 overflow-auto rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Qty</TableHead>
+                        <TableHead>Unit Price</TableHead>
+                        <TableHead>Date</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {parsedData.map((item, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{item.category}</TableCell>
+                          <TableCell>{item.quantity}</TableCell>
+                          <TableCell>${item.unitPrice.toFixed(2)}</TableCell>
+                          <TableCell>{format(item.expenditureDate, 'yyyy-MM-dd')}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setImportModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleImport} disabled={parsedData.length === 0 || parseErrors.length > 0 || isImporting}>
+              {isImporting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Importing...</> : `Import ${parsedData.length} records`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
        <Dialog open={isEditExpenseOpen} onOpenChange={setEditExpenseOpen}>
             <DialogContent>
