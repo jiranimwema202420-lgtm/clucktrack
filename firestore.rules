@@ -1,143 +1,109 @@
-/**
- * @fileoverview Firestore Security Rules for the CluckTrack Application
- * @author expert-firebase-rules-architect
- *
- * @description
- * This ruleset enforces a strict user-ownership model combined with a global,
- * existence-based role system for administrative access. The core philosophy is
- * to ensure that all user-generated data is private by default, accessible only
- * to the user who created it.
- *
- * ## Core Philosophy
- * The security model is built on two main principles:
- * 1.  **Path-Based Ownership**: All user-specific data (batches, poultry, sensor
- *     data, etc.) is stored in subcollections under `/users/{userId}`. This
- *     structurally isolates user data, making it easy to write clear and
- *     performant rules that grant access only to the authenticated owner.
- * 2.  **Global Admin Roles**: A top-level `/roles_admin` collection manages
- *     administrative privileges. A user is considered an admin if a document
- *     with their UID exists in this collection. Admins have write access to
- *     globally managed data, such as the `/feeds` catalog.
- *
- * ## Data Structure
- * - `/users/{userId}`: The root for all data owned by a specific user.
- *   - `/users/{userId}/batches/{batchId}`: A user's poultry batches.
- *     - `/users/{userId}/batches/{batchId}/poultry/{poultryId}`: Individual birds within a batch.
- *     - `/users/{userId}/batches/{batchId}/feedConsumption/{feedConsumptionId}`: Feed records for a batch.
- *     - `/users/{userId}/batches/{batchId}/alerts/{alertId}`: System alerts for a batch.
- *   - `/users/{userId}/sensorData/{sensorDataId}`: IoT sensor data linked to a user.
- * - `/feeds/{feedId}`: A global catalog of feed types, readable by all signed-in users but writable only by admins.
- * - `/roles_admin/{userId}`: An existence-based collection to grant users admin privileges.
- *
- * ## Key Security Decisions
- * - **No User Enumeration**: Listing the top-level `/users` collection is explicitly disallowed to protect user privacy.
- * - **Denormalization for Authorization**: To ensure performant and secure access checks within subcollections, authorization-critical fields like `batchId` are denormalized onto child documents (e.g., Poultry, FeedConsumption). The rules enforce the integrity of these links on create and their immutability on update.
- * - **Admin-Managed Global Data**: Collections like `/feeds` and `/roles_admin` are managed exclusively by users with the 'admin' role, separating administrative tasks from standard user operations.
- * - **Default Deny**: Any operation not explicitly granted is denied.
- */
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // -------------------------------------------------------------------------
-    // Helper Functions
-    // -------------------------------------------------------------------------
-
-    /**
-     * @description Checks if a user is authenticated.
-     */
+    // -----------------------------------------------------------------------
+    // HELPER FUNCTIONS
+    // -----------------------------------------------------------------------
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * @description Checks if the requesting user's UID matches the provided userId.
-     * This is the foundation of the user-ownership model.
-     * @param userId The UID of the document owner.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * @description Checks if the resource being accessed already exists.
-     * Crucial for protecting against writes to non-existent paths.
-     */
     function isExistingDoc() {
       return resource != null;
     }
 
-    /**
-     * @description Combines ownership and existence checks for secure updates and deletes.
-     * @param userId The UID of the document owner.
-     */
     function isExistingOwner(userId) {
       return isOwner(userId) && isExistingDoc();
     }
 
-    /**
-     * @description Checks if the requesting user has admin privileges.
-     * Role is granted by the existence of a document in the /roles_admin collection.
-     */
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
-    // -------------------------------------------------------------------------
-    // User Data
-    // -------------------------------------------------------------------------
-
-    /**
-     * @description Manages user profile documents and their subcollections.
-     * @path /users/{userId}
-     * @allow (get, create, update, delete) A user can manage their own profile.
-     * @deny (list) Prevents listing all user profiles to protect privacy.
-     */
+    // -----------------------------------------------------------------------
+    // USERS ROOT
+    // Prevents enumeration of all users
+    // -----------------------------------------------------------------------
     match /users/{userId} {
+
+      // USER PROFILE DOC -----------------------------------------------------
       allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow list: if false; // never allow listing all users
+      allow create: if isOwner(userId)
+                  && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId)
+                  && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
 
-      // Rules for all user-owned subcollections
+      // ---------------------------------------------------------------------
+      // SUBCOLLECTIONS (all user-owned)
+      // Each section includes two rules:
+      //   1. match /subcollection         <-- for LIST operations
+      //   2. match /subcollection/{docId} <-- for GET/WRITE operations
+      // ---------------------------------------------------------------------
+
+      // CONTACTS -------------------------------------------------------------
+      match /contacts {
+        allow list: if isOwner(userId);
+      }
+      match /contacts/{contactId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // FLOCKS ---------------------------------------------------------------
+      match /flocks {
+        allow list: if isOwner(userId);
+      }
       match /flocks/{flockId} {
         allow read, write: if isOwner(userId);
+      }
+
+      // SALES ----------------------------------------------------------------
+      match /sales {
+        allow list: if isOwner(userId);
       }
       match /sales/{saleId} {
         allow read, write: if isOwner(userId);
       }
+
+      // EXPENDITURES ---------------------------------------------------------
+      match /expenditures {
+        allow list: if isOwner(userId);
+      }
       match /expenditures/{expenditureId} {
         allow read, write: if isOwner(userId);
       }
-      match /contacts/{contactId} {
-        allow read, write: if isOwner(userId);
+
+      // SENSOR DATA ----------------------------------------------------------
+      match /sensorData {
+        allow list: if isOwner(userId);
       }
       match /sensorData/{sensorDataId} {
         allow read, write: if isOwner(userId);
       }
     }
 
-    // -------------------------------------------------------------------------
-    // Global & Admin-Managed Data
-    // -------------------------------------------------------------------------
-
-    /**
-     * @description A global catalog of feed types.
-     * @path /feeds/{feedId}
-     * @allow (read) Any authenticated user can read feed types.
-     * @allow (write) Only admins can manage feed types.
-     */
+    // -----------------------------------------------------------------------
+    // GLOBAL FEED CATALOG
+    // -----------------------------------------------------------------------
+    match /feeds {
+      allow list: if isSignedIn();
+    }
     match /feeds/{feedId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
-    /**
-     * @description Manages admin role grants. Document existence confers admin rights.
-     * @path /roles_admin/{userId}
-     * @allow (read, write) Only admins can manage roles.
-     */
+    // -----------------------------------------------------------------------
+    // ADMIN ROLES
+    // -----------------------------------------------------------------------
     match /roles_admin/{userId} {
       allow read, write: if isAdmin();
     }
