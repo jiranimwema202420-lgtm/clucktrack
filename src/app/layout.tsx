@@ -17,8 +17,9 @@ const publicRoutes = ['/login'];
 function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user, isUserLoading } = useFirebase();
+  const isLandingPage = pathname === '/';
 
-  if (isUserLoading) {
+  if (isUserLoading && !isLandingPage) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -27,36 +28,45 @@ function AppLayout({ children }: { children: ReactNode }) {
   }
 
   const isPublicRoute = publicRoutes.includes(pathname);
-  const isLandingPage = pathname === '/';
 
-  // If user is not logged in and trying to access a protected route
-  if (!user && !isPublicRoute && !isLandingPage) {
-    redirect('/login');
-  }
-  
-  // If user is logged in and on a public route or landing page
-  if (user && (isPublicRoute || isLandingPage)) {
+  // If loading is finished and user is logged in, redirect from landing or public routes
+  if (!isUserLoading && user && (isLandingPage || isPublicRoute)) {
     redirect('/dashboard');
   }
   
+  // If loading is finished and user is not logged in, redirect from protected routes
+  if (!isUserLoading && !user && !isPublicRoute && !isLandingPage) {
+    redirect('/login');
+  }
+  
   // For landing and login pages, render them without the main app layout
+  // also show landing page if user is loading
   if (isLandingPage || isPublicRoute) {
     return <div className="bg-background">{children}</div>;
   }
 
-  // Render the full app layout for authenticated users
+  // Render the full app layout for authenticated users on protected routes
+  if (user) {
+    return (
+      <SidebarProvider>
+        <Sidebar>
+          <Nav />
+        </Sidebar>
+        <SidebarInset>
+          <Header />
+          <div className="p-4 lg:p-8">
+            {children}
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    );
+  }
+
+  // Fallback for edge cases (should not be reached with current logic)
   return (
-    <SidebarProvider>
-      <Sidebar>
-        <Nav />
-      </Sidebar>
-      <SidebarInset>
-        <Header />
-        <div className="p-4 lg:p-8">
-          {children}
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+    <div className="flex h-screen w-screen items-center justify-center bg-background">
+      <Loader2 className="h-16 w-16 animate-spin text-primary" />
+    </div>
   );
 }
 
