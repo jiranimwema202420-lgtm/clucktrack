@@ -6,7 +6,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
-import { doc, setDoc, Firestore, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, Firestore } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 
 
