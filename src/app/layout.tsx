@@ -11,6 +11,7 @@ import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar'
 import Header from '@/components/header';
 import Nav from '@/components/nav';
 import { Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const publicRoutes = ['/login'];
 
@@ -49,7 +50,7 @@ function AppLayout({ children }: { children: ReactNode }) {
   if (user) {
     return (
       <SidebarProvider>
-        <Sidebar>
+        <Sidebar className='bg-card/60 backdrop-blur-lg border-r border-border/20'>
           <Nav />
         </Sidebar>
         <SidebarInset>
@@ -83,7 +84,9 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-sans antialiased">
+      <body className={cn("font-sans antialiased relative min-h-screen")}>
+        <div className="absolute inset-0 -z-10 h-full w-full bg-background bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] dark:bg-[radial-gradient(#ffffff20_1px,transparent_1px)]"></div>
+        <div className="absolute inset-0 -z-20 h-full w-full bg-gradient-to-br from-primary/10 via-background to-background"></div>
         <FirebaseClientProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <AppLayout>{children}</AppLayout>

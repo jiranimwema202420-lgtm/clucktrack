@@ -61,7 +61,7 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm lg:px-8">
+    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-border/20 bg-background/60 px-4 backdrop-blur-lg lg:px-8">
       <SidebarTrigger className="md:hidden" />
       
       <div className="flex items-center gap-2">
@@ -91,7 +91,7 @@ export default function Header() {
                 <ChevronsUpDown className="ml-2 h-4 w-4 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-56 bg-card/80 backdrop-blur-xl">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
                <Link href="/settings">
