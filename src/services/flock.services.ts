@@ -1,5 +1,5 @@
 import { collection, doc, Timestamp, Firestore } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/firestore/non-blocking-writes';
 import { z } from 'zod';
 import { expenditureSchema, flockSchema } from '@/lib/types';
 
@@ -39,4 +39,12 @@ export async function updateFlockTotals(firestore: Firestore, userId: string, fl
     // to safely read and then write values.
     // For the client-side, the calculation is done within the component before calling updateFlock.
     // This function can be built out later if a transactional update service is created.
+}
+
+export function updateFlockInventory(firestore: Firestore, userId: string, flockId: string, quantityChange: number, saleType: 'Birds' | 'Eggs') {
+    const flockDocRef = doc(firestore, 'users', userId, 'flocks', flockId);
+    // This is a simplified client-side update.
+    // In a real-world scenario, this should be a transaction in a Cloud Function
+    // to prevent race conditions.
+    // For now, we will fetch the doc, update, and write back from the component logic.
 }

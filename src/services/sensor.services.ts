@@ -1,6 +1,5 @@
-
 import { collection, Timestamp, Firestore } from 'firebase/firestore';
-import { addDocumentNonBlocking } from '@/firebase';
+import { addDocumentNonBlocking } from '@/firebase/firestore/non-blocking-writes';
 
 type SensorDataPayload = {
     temperature: number;

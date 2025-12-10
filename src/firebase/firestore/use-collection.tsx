@@ -9,6 +9,8 @@ import {
   QuerySnapshot,
   CollectionReference,
 } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 /** Utility type to add an 'id' field to a given type T. */
 export type WithId<T> = T & { id: string };
@@ -82,9 +84,15 @@ export function useCollection<T = any>(
         setError(null);
         setIsLoading(false);
       },
-      (error: FirestoreError) => {
-        console.error("Firestore error:", error);
-        setError(error);
+      (serverError: FirestoreError) => {
+        const path = (memoizedTargetRefOrQuery as InternalQuery)._query.path.canonicalString();
+        const permissionError = new FirestorePermissionError({
+          path: path,
+          operation: 'list',
+        }, serverError);
+
+        errorEmitter.emit('permission-error', permissionError);
+        setError(permissionError);
         setData(null);
         setIsLoading(false);
       }

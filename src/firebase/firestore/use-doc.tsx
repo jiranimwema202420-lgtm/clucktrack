@@ -10,6 +10,8 @@ import {
   DocumentSnapshot,
 } from 'firebase/firestore';
 import type { WithId } from './use-collection';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 
 export interface UseDocResult<T> {
@@ -50,9 +52,14 @@ export function useDoc<T = any>(
         setError(null);
         setIsLoading(false);
       },
-      (err: FirestoreError) => {
-        console.error("Firestore 'useDoc' error:", err);
-        setError(err);
+      (serverError: FirestoreError) => {
+        const permissionError = new FirestorePermissionError({
+          path: memoizedDocRef.path,
+          operation: 'get',
+        }, serverError);
+        
+        errorEmitter.emit('permission-error', permissionError);
+        setError(permissionError);
         setData(null);
         setIsLoading(false);
       }

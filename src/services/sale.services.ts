@@ -1,5 +1,5 @@
 import { collection, doc, Timestamp, Firestore } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/firestore/non-blocking-writes';
 import type { Sale } from '@/lib/types';
 import { z } from 'zod';
 import { saleSchema } from '@/lib/types';
