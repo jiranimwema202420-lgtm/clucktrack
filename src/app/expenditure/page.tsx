@@ -76,9 +76,6 @@ export default function ExpenditurePage() {
   const [parsedData, setParsedData] = useState<ParsedExpenditure[]>([]);
   const [parseErrors, setParseErrors] = useState<string[]>([]);
   const [isImporting, setIsImporting] = useState(false);
-  const [isAddFlockFromExpenseOpen, setAddFlockFromExpenseOpen] = useState(false);
-
-
   
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
@@ -175,19 +172,15 @@ export default function ExpenditurePage() {
         description: 'Receipt data has been extracted.',
       });
 
-      // Find the best matching category
       const scannedCategory = result.category.toLowerCase();
       const matchedCategory = expenditureCategories.find(c => c.toLowerCase().includes(scannedCategory) || scannedCategory.includes(c.toLowerCase())) || 'Other';
-
-      form.reset({
-        category: matchedCategory,
-        quantity: result.quantity > 0 ? result.quantity : 1,
-        unitPrice: result.unitPrice > 0 ? result.unitPrice : result.amount,
-        amount: result.amount,
-        description: result.description,
-        expenditureDate: result.expenditureDate ? new Date(result.expenditureDate) : new Date(),
-        flockId: form.getValues('flockId'),
-      });
+      
+      form.setValue('category', matchedCategory);
+      form.setValue('quantity', result.quantity > 0 ? result.quantity : 1);
+      form.setValue('unitPrice', result.unitPrice > 0 ? result.unitPrice : result.amount);
+      form.setValue('amount', result.amount);
+      form.setValue('description', result.description);
+      form.setValue('expenditureDate', result.expenditureDate ? new Date(result.expenditureDate) : new Date());
 
       setScannerOpen(false);
       setAddExpenseOpen(true);
@@ -228,12 +221,6 @@ export default function ExpenditurePage() {
       return;
     }
 
-    if (values.category === 'Day Old Chicks') {
-        setAddExpenseOpen(false);
-        setAddFlockFromExpenseOpen(true);
-        return;
-    }
-
     if (flockRelatedCategories.includes(values.category) && !values.flockId) {
         toast({ variant: "destructive", title: "Flock Required", description: "Please select a flock for this expenditure category." });
         return;
@@ -263,13 +250,11 @@ export default function ExpenditurePage() {
     const updatedExpenditure = { ...values, expenditureDate: Timestamp.fromDate(values.expenditureDate), amount: amount };
     updateDocumentNonBlocking(expenditureDocRef, updatedExpenditure);
 
-    // Calculate changes and update flock
     const amountDifference = amount - selectedExpense.amount;
     const oldFeedAmount = selectedExpense.category === 'Feed' ? selectedExpense.quantity : 0;
     const newFeedAmount = values.category === 'Feed' ? values.quantity : 0;
     const feedDifference = newFeedAmount - oldFeedAmount;
     
-    // If flock association changed, revert old and apply to new
     if (selectedExpense.flockId && selectedExpense.flockId !== values.flockId) {
         updateFlockTotals(selectedExpense.flockId, -selectedExpense.amount, -oldFeedAmount);
     }
@@ -707,7 +692,11 @@ export default function ExpenditurePage() {
             </DialogContent>
        </Dialog>
         
-        <AlertDialog open={isAddFlockFromExpenseOpen} onOpenChange={setAddFlockFromExpenseOpen}>
+        <AlertDialog>
+            <AlertDialogTrigger asChild>
+                {/* This is hidden and triggered programmatically */}
+                <button id="addFlockFromExpenseTrigger" className="hidden"></button>
+            </AlertDialogTrigger>
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>Create New Flock?</AlertDialogTitle>
@@ -716,12 +705,9 @@ export default function ExpenditurePage() {
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setAddFlockFromExpenseOpen(false)}>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction onClick={() => {
-                        // This logic should ideally use a router push and state management
-                        // For simplicity here, we'll just inform the user.
                         toast({ title: "Redirecting...", description: "Please add a new flock in the inventory page."});
-                        setAddFlockFromExpenseOpen(false);
                         // In a real app, you'd use Next.js router to navigate
                         // router.push('/inventory?from=expense&...');
                     }}>
