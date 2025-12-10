@@ -22,11 +22,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarContent,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
+  SidebarGroup
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/logo';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -80,32 +76,34 @@ export default function Nav() {
           <Logo />
         </Link>
       </SidebarHeader>
-      <SidebarContent className="p-2">
+      <SidebarContent className="p-0">
         <Accordion type="multiple" defaultValue={navGroups.map(g => g.title)} className="w-full">
         {navGroups.map((group) => (
-            <AccordionItem value={group.title} key={group.title} className="border-none">
-                <AccordionTrigger className="text-xs text-muted-foreground uppercase tracking-wider font-semibold hover:no-underline py-2 px-2 rounded-md hover:bg-muted">
-                    {group.title}
-                </AccordionTrigger>
-                <AccordionContent className="pb-2">
-                    <SidebarMenu>
-                        {group.items.map((item) => (
-                            <SidebarMenuItem key={item.href}>
-                            <SidebarMenuButton
-                                asChild
-                                isActive={pathname === item.href}
-                                tooltip={item.label}
-                            >
-                                <Link href={item.href}>
-                                <item.icon />
-                                <span>{item.label}</span>
-                                </Link>
-                            </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        ))}
-                    </SidebarMenu>
-                </AccordionContent>
-            </AccordionItem>
+            <SidebarGroup key={group.title}>
+                <AccordionItem value={group.title} className="border-none">
+                    <AccordionTrigger className="text-xs text-muted-foreground uppercase tracking-wider font-semibold hover:no-underline py-2 px-2 rounded-md hover:bg-muted">
+                        {group.title}
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-2">
+                        <SidebarMenu>
+                            {group.items.map((item) => (
+                                <SidebarMenuItem key={item.href}>
+                                <SidebarMenuButton
+                                    asChild
+                                    isActive={pathname === item.href}
+                                    tooltip={item.label}
+                                >
+                                    <Link href={item.href}>
+                                    <item.icon />
+                                    <span>{item.label}</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            ))}
+                        </SidebarMenu>
+                    </AccordionContent>
+                </AccordionItem>
+            </SidebarGroup>
         ))}
         </Accordion>
       </SidebarContent>
