@@ -423,7 +423,7 @@ export default function ExpenditurePage() {
             />
         )}
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
               control={form.control}
               name="quantity"
@@ -553,7 +553,7 @@ export default function ExpenditurePage() {
        </Dialog>
         
        <Dialog open={isScannerOpen} onOpenChange={setScannerOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-md w-full">
           <DialogHeader>
             <DialogTitle>Scan Receipt</DialogTitle>
             <DialogDescription>
