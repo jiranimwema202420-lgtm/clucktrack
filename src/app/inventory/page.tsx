@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, MinusCircle, Calendar as CalendarIcon, Loader2, Trash2, Pencil, Egg } from 'lucide-react';
+import { MinusCircle, Calendar as CalendarIcon, Loader2, Trash2, Pencil, Egg } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -67,7 +67,7 @@ import { format, differenceInWeeks } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Flock } from '@/lib/types';
 import { flockSchema } from '@/lib/types';
-import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, Timestamp, doc } from 'firebase/firestore';
 import { z } from 'zod';
 import { useCurrency } from '@/hooks/use-currency';
@@ -138,7 +138,7 @@ export default function InventoryPage() {
   }
 
   function onRecordLossSubmit(values: z.infer<typeof recordLossSchema>) {
-    if (!user) return;
+    if (!user || !flocks) return;
     const flock = flocks?.find(f => f.id === values.flockId);
     if (!flock) {
         toast({
@@ -173,15 +173,23 @@ export default function InventoryPage() {
   }
 
   function onRecordEggsSubmit(values: z.infer<typeof recordEggsSchema>) {
-    if (!user) return;
-    const flock = flocks?.find(f => f.id === values.flockId);
+    if (!user || !flocks) return;
+    const flock = flocks.find(f => f.id === values.flockId);
     if (!flock) {
         toast({ variant: "destructive", title: "Flock not found" });
         return;
     }
 
     const newTotalEggs = (flock.totalEggsCollected || 0) + values.count;
-    const newEggProductionRate = flock.count > 0 ? (((flock.totalEggsCollected || 0) + values.count) / (differenceInWeeks(new Date(), flock.hatchDate.toDate()) * 7 * flock.count) * 100) : 0;
+    const weeksSinceHatch = differenceInWeeks(new Date(), flock.hatchDate.toDate());
+    const daysSinceHatch = weeksSinceHatch * 7;
+    
+    let newEggProductionRate = flock.eggProductionRate || 0;
+    if (flock.count > 0 && daysSinceHatch > 0) {
+        // A more accurate way would be to track daily egg collections.
+        // This is an approximation based on total eggs over total possible laying days.
+        newEggProductionRate = (newTotalEggs / (daysSinceHatch * flock.count)) * 100;
+    }
     
     const flockDocRef = doc(firestore, 'users', user.uid, 'flocks', values.flockId);
     
@@ -244,16 +252,19 @@ export default function InventoryPage() {
   };
 
   const calculateFCR = (flock: Flock) => {
-    if (flock.type !== 'Broiler' || !flock.count || !flock.averageWeight || !flock.totalFeedConsumed || flock.totalFeedConsumed <= 0) return 'N/A';
-    const totalWeight = flock.count * flock.averageWeight;
-    if (totalWeight === 0) return 'N/A';
-    const fcr = flock.totalFeedConsumed / totalWeight;
+    if (flock.type !== 'Broiler') return 'N/A';
+    const totalWeightGain = (flock.count || 0) * (flock.averageWeight || 0);
+    const totalFeed = flock.totalFeedConsumed || 0;
+    if (totalWeightGain <= 0 || totalFeed <= 0) return 'N/A';
+    const fcr = totalFeed / totalWeightGain;
     return fcr.toFixed(2);
   }
 
   const calculateCostPerBird = (flock: Flock) => {
-    if(!flock.count || !flock.totalCost || flock.count <= 0) return 'N/A';
-    const cost = flock.totalCost / flock.count;
+    const totalCost = flock.totalCost || 0;
+    const birdCount = flock.count || 0;
+    if (birdCount <= 0 || totalCost <= 0) return 'N/A';
+    const cost = totalCost / birdCount;
     return formatCurrency(cost);
   }
 
@@ -477,7 +488,7 @@ export default function InventoryPage() {
                                             <SelectContent>
                                                 {layerFlocks?.map(flock => (
                                                     <SelectItem key={flock.id} value={flock.id}>
-                                                        {flock.id.substring(0,6)}... - {flock.breed} ({flock.count} birds)
+                                                        {flock.breed} ({flock.count} birds)
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -540,7 +551,7 @@ export default function InventoryPage() {
                                             <SelectContent>
                                                 {flocks?.map(flock => (
                                                     <SelectItem key={flock.id} value={flock.id}>
-                                                        {flock.id.substring(0,6)}... - {flock.breed} ({flock.count} birds)
+                                                        {flock.breed} ({flock.count} birds)
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -642,7 +653,7 @@ export default function InventoryPage() {
                 <TableCell className="text-right">{getAgeInWeeks(flock.hatchDate)}</TableCell>
                 <TableCell className="text-right">
                     {flock.type === 'Broiler' ? 
-                        `Avg Wt: ${flock.averageWeight.toFixed(2)} kg | FCR: ${calculateFCR(flock)}` :
+                        `Avg Wt: ${(flock.averageWeight || 0).toFixed(2)} kg | FCR: ${calculateFCR(flock)}` :
                         `Eggs: ${flock.totalEggsCollected || 0} | Prod: ${flock.eggProductionRate || 0}%`
                     }
                 </TableCell>

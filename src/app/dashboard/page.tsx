@@ -13,12 +13,13 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { mockSensorData } from '@/lib/data';
-import { Wheat, Users, BrainCircuit, ArrowRight, Loader2, TrendingDown, Scale, HeartPulse, Egg } from 'lucide-react';
+import { Wheat, Users, BrainCircuit, ArrowRight, Loader2, Scale, Egg } from 'lucide-react';
 import Link from 'next/link';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Flock } from '@/lib/types';
+import { HeartPulse } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,17 +55,14 @@ export default function DashboardPage() {
 
   const avgFCR = fcrData && fcrData.length > 0 ? (fcrData.reduce((a, b) => a + b, 0) / fcrData.length).toFixed(2) : 'N/A';
 
-  const initialCount = flocks?.reduce((sum, flock) => sum + flock.initialCount, 0) || 0;
-  const currentCount = flocks?.reduce((sum, flock) => sum + flock.count, 0) || 0;
-  const mortalityRate = initialCount > 0 ? (((initialCount - currentCount) / initialCount) * 100).toFixed(2) : '0.00';
-  
-  const totalWeight = broilerFlocks.reduce((sum, flock) => sum + (flock.count * flock.averageWeight), 0) || 0;
+  const totalWeight = broilerFlocks.reduce((sum, flock) => sum + (flock.count * flock.averageWeight), 0);
   const totalBroilers = broilerFlocks.reduce((sum, flock) => sum + flock.count, 0);
   const avgWeight = totalBroilers > 0 ? (totalWeight / totalBroilers).toFixed(2) : '0.00';
 
   const totalEggs = layerFlocks.reduce((sum, flock) => sum + (flock.totalEggsCollected || 0), 0);
   const totalLayers = layerFlocks.reduce((sum, flock) => sum + flock.count, 0);
-  const avgEggProduction = totalLayers > 0 ? (layerFlocks.reduce((sum, f) => sum + (f.eggProductionRate || 0), 0) / layerFlocks.length).toFixed(2) : '0.00';
+  const layerFlocksWithProd = layerFlocks.filter(f => f.eggProductionRate && f.eggProductionRate > 0);
+  const avgEggProduction = layerFlocksWithProd.length > 0 ? (layerFlocksWithProd.reduce((sum, f) => sum + (f.eggProductionRate || 0), 0) / layerFlocksWithProd.length).toFixed(2) : '0.00';
 
 
   if (isLoading) {
