@@ -12,7 +12,7 @@
  * Key Security Decisions:
  * - Farm Membership is Key: A user's ability to read or write any data is
  *   contingent on the existence of a corresponding user document at
- *   `/farms/{farmId}/users/{userId}`. This serves as the single source of truth
+ *   `/farms/{farmId}/users/$(request.auth.uid)`. This serves as the single source of truth
  *   for farm membership.
  * - Role-Based Administration: A simple role system ('admin') is defined for
  *   managing users within a farm. Only admins can add or remove other users.
@@ -116,6 +116,17 @@ service cloud.firestore {
     // --------------------------------------------------------------------
 
     /**
+     * @description Manages user profile documents.
+     * @path /users/{userId}
+     * @allow (read, write) Any authenticated user on their own document.
+     * @deny (list) Listing users is disallowed.
+     */
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+      allow list: if false;
+    }
+
+    /**
      * @description Manages farm documents. Creation is open to any user, but
      *              modification and deletion are restricted to farm admins.
      * @path /farms/{farmId}
@@ -142,6 +153,14 @@ service cloud.firestore {
         allow create: if isFarmAdmin(farmId) && request.resource.data.farmId == farmId && request.resource.data.id == userId;
         allow update: if (isOwner(userId) || isFarmAdmin(farmId)) && resource != null && isFarmIdImmutable();
         allow delete: if isFarmAdmin(farmId) && resource != null;
+      }
+      
+      /**
+       * All other top-level collections belonging to a user
+       * can only be read/written by that user.
+       */
+      match /{collection}/{docId} {
+        allow read, write: if exists(/databases/$(database)/documents/users/$(request.auth.uid));
       }
 
       /**
@@ -202,3 +221,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

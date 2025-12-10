@@ -1,347 +1,110 @@
 {
   "entities": {
-    "Farm": {
+    "UserProfile": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Farm",
+      "title": "User Profile",
       "type": "object",
-      "description": "Represents a poultry farm.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Farm entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the farm."
-        },
-        "location": {
-          "type": "string",
-          "description": "Geographic location of the farm."
-        },
-        "description": {
-          "type": "string",
-          "description": "Description of the farm."
-        }
-      },
-      "required": [
-        "id",
-        "name"
-      ]
-    },
-    "PoultryBatch": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "PoultryBatch",
-      "type": "object",
-      "description": "Represents a batch of poultry (e.g., chickens) within a farm.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the PoultryBatch entity."
-        },
-        "farmId": {
-          "type": "string",
-          "description": "Reference to Farm. (Relationship: Farm 1:N PoultryBatch)"
-        },
-        "batchName": {
-          "type": "string",
-          "description": "Name or identifier for the poultry batch."
-        },
-        "breed": {
-          "type": "string",
-          "description": "Breed of poultry in this batch."
-        },
-        "quantity": {
-          "type": "number",
-          "description": "Number of poultry in the batch."
-        },
-        "dateOfArrival": {
-          "type": "string",
-          "description": "Date when the poultry batch arrived at the farm.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "farmId",
-        "batchName",
-        "quantity"
-      ]
-    },
-    "SensorData": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "SensorData",
-      "type": "object",
-      "description": "Represents sensor data collected from farm equipment.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the SensorData entity."
-        },
-        "farmId": {
-          "type": "string",
-          "description": "Reference to Farm. (Relationship: Farm 1:N SensorData)"
-        },
-        "sensorType": {
-          "type": "string",
-          "description": "Type of sensor (e.g., temperature, humidity, feed level)."
-        },
-        "value": {
-          "type": "number",
-          "description": "Sensor reading value."
-        },
-        "timestamp": {
-          "type": "string",
-          "description": "Timestamp when the sensor data was recorded.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "farmId",
-        "sensorType",
-        "value",
-        "timestamp"
-      ]
-    },
-    "FeedConsumption": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "FeedConsumption",
-      "type": "object",
-      "description": "Represents feed consumption data for a poultry batch.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the FeedConsumption entity."
-        },
-        "poultryBatchId": {
-          "type": "string",
-          "description": "Reference to PoultryBatch. (Relationship: PoultryBatch 1:N FeedConsumption)"
-        },
-        "feedType": {
-          "type": "string",
-          "description": "Type of feed consumed."
-        },
-        "quantity": {
-          "type": "number",
-          "description": "Quantity of feed consumed (e.g., in kg)."
-        },
-        "timestamp": {
-          "type": "string",
-          "description": "Timestamp when the feed consumption was recorded.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "poultryBatchId",
-        "feedType",
-        "quantity",
-        "timestamp"
-      ]
-    },
-    "HealthRecord": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "HealthRecord",
-      "type": "object",
-      "description": "Represents a health record for a poultry batch.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the HealthRecord entity."
-        },
-        "poultryBatchId": {
-          "type": "string",
-          "description": "Reference to PoultryBatch. (Relationship: PoultryBatch 1:N HealthRecord)"
-        },
-        "date": {
-          "type": "string",
-          "description": "Date of the health record.",
-          "format": "date-time"
-        },
-        "notes": {
-          "type": "string",
-          "description": "Notes or observations about the health of the poultry."
-        },
-        "mortalityCount": {
-          "type": "number",
-          "description": "Number of deaths recorded in the batch."
-        }
-      },
-      "required": [
-        "id",
-        "poultryBatchId",
-        "date"
-      ]
-    },
-    "User": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "User",
-      "type": "object",
-      "description": "Represents a user of the application.",
+      "description": "Represents a user of the application and their associated farm.",
       "properties": {
         "id": {
           "type": "string",
           "description": "Unique identifier for the User entity."
         },
-        "farmId": {
+        "displayName": {
           "type": "string",
-          "description": "Reference to Farm. (Relationship: Farm 1:N User)"
-        },
-        "username": {
-          "type": "string",
-          "description": "Username of the user."
+          "description": "The user's display name."
         },
         "email": {
           "type": "string",
-          "description": "Email address of the user.",
+          "description": "The user's email address.",
           "format": "email"
         },
-        "role": {
+        "farmId": {
           "type": "string",
-          "description": "Role of the user (e.g., admin, worker, vet)."
+          "description": "The ID of the farm this user belongs to."
         }
       },
       "required": [
         "id",
-        "username",
-        "email",
-        "role"
+        "email"
       ]
+    },
+    "Flock": {
+      "title": "Flock",
+      "type": "object",
+      "description": "A group of birds being raised together.",
+      "properties": {
+        "id": { "type": "string" },
+        "breed": { "type": "string" },
+        "type": { "type": "string", "enum": ["Broiler", "Layer"] },
+        "count": { "type": "number" },
+        "initialCount": { "type": "number" },
+        "averageWeight": { "type": "number" },
+        "hatchDate": { "type": "string", "format": "date-time" },
+        "totalFeedConsumed": { "type": "number" },
+        "totalCost": { "type": "number" },
+        "eggProductionRate": { "type": "number" },
+        "totalEggsCollected": { "type": "number" }
+      },
+      "required": ["id", "breed", "type", "count", "initialCount", "hatchDate"]
+    },
+    "Sale": {
+      "title": "Sale",
+      "type": "object",
+      "description": "A record of a sale of birds or eggs.",
+      "properties": {
+        "id": { "type": "string" },
+        "flockId": { "type": "string" },
+        "saleType": { "type": "string", "enum": ["Birds", "Eggs"] },
+        "quantity": { "type": "number" },
+        "pricePerUnit": { "type": "number" },
+        "customer": { "type": "string" },
+        "saleDate": { "type": "string", "format": "date-time" },
+        "total": { "type": "number" }
+      },
+      "required": ["id", "flockId", "saleType", "quantity", "pricePerUnit", "saleDate", "total"]
+    },
+    "Expenditure": {
+      "title": "Expenditure",
+      "type": "object",
+      "description": "A record of a farm expense.",
+      "properties": {
+        "id": { "type": "string" },
+        "category": { "type": "string" },
+        "quantity": { "type": "number" },
+        "unitPrice": { "type": "number" },
+        "amount": { "type": "number" },
+        "description": { "type": "string" },
+        "expenditureDate": { "type": "string", "format": "date-time" },
+        "flockId": { "type": "string" }
+      },
+      "required": ["id", "category", "quantity", "unitPrice", "amount", "expenditureDate"]
     }
   },
   "auth": {
     "providers": [
       "password",
-      "anonymous"
+      "google.com"
     ]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/farms/{farmId}",
-        "definition": {
-          "entityName": "Farm",
-          "schema": {
-            "$ref": "#/backend/entities/Farm"
-          },
-          "description": "Stores farm information. The farmId is used to scope all other collections related to the farm.",
-          "params": [
-            {
-              "name": "farmId",
-              "description": "Unique identifier for the farm."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/farms/{farmId}/poultryBatches/{poultryBatchId}",
-        "definition": {
-          "entityName": "PoultryBatch",
-          "schema": {
-            "$ref": "#/backend/entities/PoultryBatch"
-          },
-          "description": "Stores poultry batch information for a specific farm. Includes the denormalized 'farmId' for authorization independence.",
-          "params": [
-            {
-              "name": "farmId",
-              "description": "Unique identifier for the farm."
-            },
-            {
-              "name": "poultryBatchId",
-              "description": "Unique identifier for the poultry batch."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/farms/{farmId}/sensorData/{sensorDataId}",
-        "definition": {
-          "entityName": "SensorData",
-          "schema": {
-            "$ref": "#/backend/entities/SensorData"
-          },
-          "description": "Stores sensor data for a specific farm. Includes the denormalized 'farmId' for authorization independence.",
-          "params": [
-            {
-              "name": "farmId",
-              "description": "Unique identifier for the farm."
-            },
-            {
-              "name": "sensorDataId",
-              "description": "Unique identifier for the sensor data."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/farms/{farmId}/poultryBatches/{poultryBatchId}/feedConsumption/{feedConsumptionId}",
-        "definition": {
-          "entityName": "FeedConsumption",
-          "schema": {
-            "$ref": "#/backend/entities/FeedConsumption"
-          },
-          "description": "Stores feed consumption data for a specific poultry batch in a farm. Includes the denormalized 'farmId' and 'poultryBatchId' for authorization independence.",
-          "params": [
-            {
-              "name": "farmId",
-              "description": "Unique identifier for the farm."
-            },
-            {
-              "name": "poultryBatchId",
-              "description": "Unique identifier for the poultry batch."
-            },
-            {
-              "name": "feedConsumptionId",
-              "description": "Unique identifier for the feed consumption record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/farms/{farmId}/poultryBatches/{poultryBatchId}/healthRecords/{healthRecordId}",
-        "definition": {
-          "entityName": "HealthRecord",
-          "schema": {
-            "$ref": "#/backend/entities/HealthRecord"
-          },
-          "description": "Stores health records for a specific poultry batch in a farm. Includes the denormalized 'farmId' and 'poultryBatchId' for authorization independence.",
-          "params": [
-            {
-              "name": "farmId",
-              "description": "Unique identifier for the farm."
-            },
-            {
-              "name": "poultryBatchId",
-              "description": "Unique identifier for the poultry batch."
-            },
-            {
-              "name": "healthRecordId",
-              "description": "Unique identifier for the health record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/farms/{farmId}/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user information and roles within a farm.  Includes the denormalized 'farmId' for authorization independence.",
-          "params": [
-            {
-              "name": "farmId",
-              "description": "Unique identifier for the farm."
-            },
-            {
-              "name": "userId",
-              "description": "Unique identifier for the user."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "The Firestore structure is designed to manage data for CluckHub, a poultry farm management application. It emphasizes authorization independence and efficient querying. Each farm has its data segregated under a `/farms/{farmId}` path, ensuring that data access is limited to authorized users within that farm. User roles (admin, worker, vet) are stored within the `/farms/{farmId}/users/{userId}` document. Authorization independence is achieved by storing the `farmId` within each entity that belongs to a farm, eliminating the need for `get()` calls to parent documents to determine authorization. The structure supports QAPs (Rules are not Filters) by ensuring that collections are homogeneous and that list operations can be securely performed based on the `farmId` and user role. For collaborative access, the `/farms/{farmId}/users/{userId}` model is used to check the existence of the user."
+    "/users/{userId}": {
+      "schema": { "$ref": "#/backend/entities/UserProfile" },
+      "description": "Stores user profile information, including their assigned farmId."
+    },
+    "/users/{userId}/flocks/{flockId}": {
+      "schema": { "$ref": "#/backend/entities/Flock" },
+      "description": "Stores flock data specific to a user."
+    },
+    "/users/{userId}/sales/{saleId}": {
+      "schema": { "$ref": "#/backend/entities/Sale" },
+      "description": "Stores sales records for a user."
+    },
+    "/users/{userId}/expenditures/{expenditureId}": {
+      "schema": { "$ref": "#/backend/entities/Expenditure" },
+      "description": "Stores expenditure records for a user."
+    }
   }
 }
+
+    
