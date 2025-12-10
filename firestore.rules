@@ -43,31 +43,9 @@ service cloud.firestore {
 
       // ---------------------------------------------------------------------
       // SUBCOLLECTIONS (all user-owned)
+      // This single rule grants access to all subcollections for the owner.
       // ---------------------------------------------------------------------
-
-      // CONTACTS -------------------------------------------------------------
-      // TEMPORARY: Relaxed rule for debugging
-      match /contacts/{contactId} {
-        allow read, write: if isSignedIn();
-      }
-
-      // FLOCKS ---------------------------------------------------------------
-      match /flocks/{flockId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      // SALES ----------------------------------------------------------------
-      match /sales/{saleId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      // EXPENDITURES ---------------------------------------------------------
-      match /expenditures/{expenditureId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      // SENSOR DATA ----------------------------------------------------------
-      match /sensorData/{sensorDataId} {
+      match /{subcollection}/{docId=**} {
         allow read, write: if isOwner(userId);
       }
     }
