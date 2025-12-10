@@ -18,39 +18,43 @@ export type Kpi = {
 export interface Flock {
   id: string;
   breed: string;
+  type: 'Broiler' | 'Layer';
   count: number;
   initialCount: number;
   averageWeight: number; // in kg
   hatchDate: Timestamp;
   totalFeedConsumed: number; // in kg
-  totalCost: number; // in $
+  totalCost: number;
+  eggProductionRate?: number; // percentage
+  totalEggsCollected?: number;
 };
 
 const flockObjectSchema = z.object({
   breed: z.string().min(2, 'Breed name must be at least 2 characters.'),
+  type: z.enum(['Broiler', 'Layer'], { required_error: 'Please select a flock type.'}),
   count: z.coerce.number().min(1, 'Current count must be at least 1.'),
   hatchDate: z.date({ required_error: 'Please select a hatch date.' }),
   initialCount: z.coerce.number().min(1, 'Initial count must be at least 1.'),
   averageWeight: z.coerce.number().min(0, 'Average weight must be a positive number.'),
   totalFeedConsumed: z.coerce.number().min(0, 'Total feed consumed must be a positive number.'),
   totalCost: z.coerce.number().min(0, 'Total cost must be a positive number.'),
+  eggProductionRate: z.coerce.number().min(0).max(100).optional(),
+  totalEggsCollected: z.coerce.number().min(0).optional(),
 });
 
 export const flockSchema = flockObjectSchema.refine(data => data.count <= data.initialCount, {
     message: "Current count cannot be greater than initial count.",
     path: ["count"],
+}).refine(data => data.type === 'Broiler' || (data.eggProductionRate != null && data.totalEggsCollected != null), {
+    message: "Egg production details are required for Layer flocks.",
+    path: ["eggProductionRate"],
 });
-
-export const updateFlockSchema = flockObjectSchema.omit({ totalCost: true }).refine(data => data.count <= data.initialCount, {
-    message: "Current count cannot be greater than initial count.",
-    path: ["count"],
-});
-
 
 export const saleSchema = z.object({
   flockId: z.string().min(1, 'A flock must be selected for the sale.'),
+  saleType: z.enum(['Birds', 'Eggs'], { required_error: 'Please select a sale type.'}),
   quantity: z.coerce.number().positive('Sale quantity must be greater than zero.'),
-  pricePerUnit: z.coerce.number().positive('Price per bird must be greater than zero.'),
+  pricePerUnit: z.coerce.number().positive('Price per unit must be greater than zero.'),
   customer: z.string().min(2, 'Customer name must be at least 2 characters.'),
   saleDate: z.date({ required_error: 'Please select a sale date.' }),
   total: z.coerce.number(),
@@ -59,6 +63,7 @@ export const saleSchema = z.object({
 export interface Sale {
   id: string, 
   flockId: string,
+  saleType: 'Birds' | 'Eggs',
   quantity: number,
   pricePerUnit: number,
   customer: string,
@@ -97,5 +102,3 @@ export interface UserProfile {
   farmContact?: string;
   currency?: string;
 }
-
-    

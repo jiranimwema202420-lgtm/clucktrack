@@ -1,3 +1,4 @@
+
 /**
  * This ruleset enforces a strict user-ownership security model for the CluckHub application.
  *
@@ -42,17 +43,23 @@ service cloud.firestore {
     // Schema Validation Functions
     function isValidFlock(flockData) {
       return flockData.breed is string && flockData.breed.size() > 0
+          && flockData.type is string && (flockData.type == 'Broiler' || flockData.type == 'Layer')
           && flockData.hatchDate is timestamp
           && flockData.count is number && flockData.count >= 0
           && flockData.initialCount is number && flockData.initialCount > 0
           && flockData.count <= flockData.initialCount
           && flockData.averageWeight is number && flockData.averageWeight >= 0
           && flockData.totalFeedConsumed is number && flockData.totalFeedConsumed >= 0
-          && flockData.totalCost is number && flockData.totalCost >= 0;
+          && flockData.totalCost is number && flockData.totalCost >= 0
+          && (flockData.type == 'Broiler' || (
+               flockData.eggProductionRate is number && flockData.eggProductionRate >= 0 && flockData.eggProductionRate <= 100
+            && flockData.totalEggsCollected is number && flockData.totalEggsCollected >= 0
+             ));
     }
 
     function isValidSale(saleData) {
       return saleData.flockId is string && saleData.flockId.size() > 0
+          && saleData.saleType is string && (saleData.saleType == 'Birds' || saleData.saleType == 'Eggs')
           && saleData.quantity is number && saleData.quantity > 0
           && saleData.pricePerUnit is number && saleData.pricePerUnit > 0
           && saleData.customer is string && saleData.customer.size() > 0

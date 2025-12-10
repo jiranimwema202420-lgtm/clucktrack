@@ -51,6 +51,11 @@
           "type": "string",
           "description": "The breed of chickens in this flock."
         },
+        "type": {
+          "type": "string",
+          "description": "The type of flock, either 'Broiler' or 'Layer'.",
+          "enum": ["Broiler", "Layer"]
+        },
         "hatchDate": {
           "type": "string",
           "format": "date-time",
@@ -66,7 +71,7 @@
         },
         "averageWeight": {
           "type": "number",
-          "description": "The average weight of a chicken in the flock (in kg)."
+          "description": "The average weight of a chicken in the flock (in kg). Mainly for Broilers."
         },
         "totalFeedConsumed": {
           "type": "number",
@@ -75,26 +80,39 @@
         "totalCost": {
           "type": "number",
           "description": "The total cost associated with the flock."
+        },
+        "eggProductionRate": {
+            "type": "number",
+            "description": "The percentage of the flock that lays an egg each day. Only for Layers."
+        },
+        "totalEggsCollected": {
+            "type": "number",
+            "description": "The total number of eggs collected from this flock. Only for Layers."
         }
       },
-      "required": ["breed", "hatchDate", "count", "initialCount"]
+      "required": ["breed", "type", "hatchDate", "count", "initialCount"]
     },
     "Sale": {
       "title": "Sale",
       "type": "object",
-      "description": "Represents a sales transaction.",
+      "description": "Represents a sales transaction, which can be for birds or eggs.",
       "properties": {
         "flockId": {
           "type": "string",
           "description": "Reference to the Flock being sold."
         },
+        "saleType": {
+            "type": "string",
+            "description": "The type of item sold.",
+            "enum": ["Birds", "Eggs"]
+        },
         "quantity": {
           "type": "number",
-          "description": "Number of chickens sold."
+          "description": "Number of chickens or dozens of eggs sold."
         },
         "pricePerUnit": {
           "type": "number",
-          "description": "Price per chicken."
+          "description": "Price per chicken or per dozen eggs."
         },
         "customer": {
           "type": "string",
@@ -112,6 +130,7 @@
       },
       "required": [
         "flockId",
+        "saleType",
         "quantity",
         "pricePerUnit",
         "customer",

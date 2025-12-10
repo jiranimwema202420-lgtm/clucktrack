@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -12,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { mockSensorData } from '@/lib/data';
-import { Wheat, Users, BrainCircuit, ArrowRight, Loader2, TrendingDown, Scale, HeartPulse } from 'lucide-react';
+import { Wheat, Users, BrainCircuit, ArrowRight, Loader2, TrendingDown, Scale, HeartPulse, Egg } from 'lucide-react';
 import Link from 'next/link';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
@@ -38,9 +39,12 @@ export default function DashboardPage() {
   }, [firestore, user]);
   const { data: flocks, isLoading } = useCollection<Flock>(flocksRef);
   
+  const broilerFlocks = flocks?.filter(f => f.type === 'Broiler') || [];
+  const layerFlocks = flocks?.filter(f => f.type === 'Layer') || [];
+
   const totalChickens = flocks?.reduce((sum, flock) => sum + flock.count, 0) || 0;
   
-  const fcrData = flocks?.map(flock => {
+  const fcrData = broilerFlocks.map(flock => {
     const totalWeightGain = flock.count * flock.averageWeight;
     if (flock.totalFeedConsumed > 0 && totalWeightGain > 0) {
       return flock.totalFeedConsumed / totalWeightGain;
@@ -53,9 +57,14 @@ export default function DashboardPage() {
   const initialCount = flocks?.reduce((sum, flock) => sum + flock.initialCount, 0) || 0;
   const currentCount = flocks?.reduce((sum, flock) => sum + flock.count, 0) || 0;
   const mortalityRate = initialCount > 0 ? (((initialCount - currentCount) / initialCount) * 100).toFixed(2) : '0.00';
+  
+  const totalWeight = broilerFlocks.reduce((sum, flock) => sum + (flock.count * flock.averageWeight), 0) || 0;
+  const totalBroilers = broilerFlocks.reduce((sum, flock) => sum + flock.count, 0);
+  const avgWeight = totalBroilers > 0 ? (totalWeight / totalBroilers).toFixed(2) : '0.00';
 
-  const totalWeight = flocks?.reduce((sum, flock) => sum + (flock.count * flock.averageWeight), 0) || 0;
-  const avgWeight = totalChickens > 0 ? (totalWeight / totalChickens).toFixed(2) : '0.00';
+  const totalEggs = layerFlocks.reduce((sum, flock) => sum + (flock.totalEggsCollected || 0), 0);
+  const totalLayers = layerFlocks.reduce((sum, flock) => sum + flock.count, 0);
+  const avgEggProduction = totalLayers > 0 ? (layerFlocks.reduce((sum, f) => sum + (f.eggProductionRate || 0), 0) / layerFlocks.length).toFixed(2) : '0.00';
 
 
   if (isLoading) {
@@ -70,22 +79,22 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-8">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
-            title="Avg. Weight"
+            title="Avg. Weight (Broilers)"
             value={`${avgWeight} kg`}
             icon={<Scale className="h-5 w-5" />}
-            description="Across all flocks"
+            description="Across all broiler flocks"
         />
         <StatsCard
-          title="Feed Conversion"
+          title="FCR (Broilers)"
           value={avgFCR}
           icon={<Wheat className="h-5 w-5" />}
-          description="Lower is better"
+          description="Feed Conversion Ratio"
         />
         <StatsCard
-          title="Mortality Rate"
-          value={`${mortalityRate}%`}
-          icon={<TrendingDown className="h-5 w-5" />}
-          description="Across all flocks"
+          title="Avg Egg Prod. (Layers)"
+          value={`${avgEggProduction}%`}
+          icon={<Egg className="h-5 w-5" />}
+          description={`${totalEggs.toLocaleString()} total eggs`}
         />
         <Link href="/inventory">
             <StatsCard
@@ -102,7 +111,7 @@ export default function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>Flock Growth Projection</CardTitle>
-              <CardDescription>Average weight gain for Cobb 500 flock.</CardDescription>
+              <CardDescription>Average weight gain for a typical broiler flock.</CardDescription>
             </CardHeader>
             <CardContent className="h-80">
                 <ResponsiveContainer width="100%" height="100%">

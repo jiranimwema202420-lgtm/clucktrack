@@ -57,7 +57,7 @@ export default function SalesPage() {
   const [isAddSaleOpen, setAddSaleOpen] = useState(false);
   const [isEditSaleOpen, setEditSaleOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
-  const [originalSaleQuantity, setOriginalSaleQuantity] = useState(0);
+  const [originalSaleData, setOriginalSaleData] = useState<{ quantity: number, flockId: string, saleType: string } | null>(null);
 
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
@@ -80,6 +80,7 @@ export default function SalesPage() {
     resolver: zodResolver(saleSchema),
     defaultValues: {
       flockId: '',
+      saleType: 'Birds',
       quantity: 10,
       pricePerUnit: 10.0,
       customer: '',
@@ -89,7 +90,16 @@ export default function SalesPage() {
 
   const watchQuantity = form.watch('quantity');
   const watchPricePerUnit = form.watch('pricePerUnit');
+  const watchFlockId = form.watch('flockId');
+  const watchSaleType = form.watch('saleType');
   const [calculatedTotal, setCalculatedTotal] = useState(0);
+  const selectedFlockForForm = flocks?.find(f => f.id === watchFlockId);
+  
+  useEffect(() => {
+      if (selectedFlockForForm && selectedFlockForForm.type === 'Broiler') {
+          form.setValue('saleType', 'Birds');
+      }
+  }, [watchFlockId, form, selectedFlockForForm]);
 
   useEffect(() => {
     const quantity = form.getValues('quantity');
@@ -98,6 +108,23 @@ export default function SalesPage() {
     setCalculatedTotal(total);
     form.setValue('total', total, { shouldValidate: true });
   }, [watchQuantity, watchPricePerUnit, form]);
+
+
+  async function updateInventory(flockId: string, quantityChange: number, type: 'Birds' | 'Eggs') {
+      if (!user || !flocks) return;
+      const flockToUpdate = flocks.find(f => f.id === flockId);
+      if (!flockToUpdate) return;
+      
+      const flockDocRef = doc(firestore, 'users', user.uid, 'flocks', flockId);
+
+      if (type === 'Birds') {
+          const newCount = flockToUpdate.count + quantityChange;
+          await updateDocumentNonBlocking(flockDocRef, { count: newCount });
+      } else if (type === 'Eggs' && flockToUpdate.totalEggsCollected != null) {
+          const newEggCount = flockToUpdate.totalEggsCollected + quantityChange;
+          await updateDocumentNonBlocking(flockDocRef, { totalEggsCollected: newEggCount });
+      }
+  }
 
 
   function onSubmit(values: z.infer<typeof saleSchema>) {
@@ -109,14 +136,16 @@ export default function SalesPage() {
         return;
     }
     
-    if (values.quantity > flockToUpdate.count) {
-        toast({ variant: "destructive", title: "Not enough birds", description: `You only have ${flockToUpdate.count} birds in flock ${flockToUpdate.id.substring(0,6)}, but are trying to sell ${values.quantity}.` });
+    if (values.saleType === 'Birds' && values.quantity > flockToUpdate.count) {
+        toast({ variant: "destructive", title: "Not enough birds", description: `You only have ${flockToUpdate.count} birds in this flock.` });
+        return;
+    }
+    if (values.saleType === 'Eggs' && values.quantity > (flockToUpdate.totalEggsCollected || 0)) {
+        toast({ variant: "destructive", title: "Not enough eggs", description: `You only have ${flockToUpdate.totalEggsCollected || 0} eggs recorded for this flock.`});
         return;
     }
 
-    const newCount = flockToUpdate.count - values.quantity;
-    const flockDocRef = doc(firestore, 'users', user.uid, 'flocks', values.flockId);
-    updateDocumentNonBlocking(flockDocRef, { count: newCount });
+    updateInventory(values.flockId, -values.quantity, values.saleType);
 
     const total = values.quantity * values.pricePerUnit;
     const newSale = {
@@ -126,13 +155,13 @@ export default function SalesPage() {
     };
     addDocumentNonBlocking(salesRef, newSale);
 
-    toast({ title: 'Sale Recorded', description: `Recorded sale of ${values.quantity} birds to ${values.customer} for ${formatCurrency(total)}.` });
+    toast({ title: 'Sale Recorded', description: `Recorded sale to ${values.customer} for ${formatCurrency(total)}.` });
     form.reset();
     setAddSaleOpen(false);
   }
 
   function onEditSubmit(values: z.infer<typeof saleSchema>) {
-    if (!user || !flocks || !selectedSale) return;
+    if (!user || !flocks || !selectedSale || !originalSaleData) return;
     
     const saleDocRef = doc(firestore, 'users', user.uid, 'sales', selectedSale.id);
     const flockToUpdate = flocks.find(f => f.id === values.flockId);
@@ -141,36 +170,24 @@ export default function SalesPage() {
         return;
     }
 
-    const quantityDifference = values.quantity - originalSaleQuantity;
-    
-    // If flock is changed, revert original flock count and deduct from new one
-    if(values.flockId !== selectedSale.flockId) {
-        const originalFlock = flocks.find(f => f.id === selectedSale.flockId);
-        if(originalFlock) {
-            const originalFlockDocRef = doc(firestore, 'users', user.uid, 'flocks', selectedSale.flockId);
-            updateDocumentNonBlocking(originalFlockDocRef, { count: originalFlock.count + originalSaleQuantity });
-        }
-        if(values.quantity > flockToUpdate.count) {
-            toast({ variant: "destructive", title: "Not enough birds", description: `The newly selected flock only has ${flockToUpdate.count} birds.` });
-            // Re-add the quantity to the original flock since the operation failed
-             if(originalFlock) {
-                const originalFlockDocRef = doc(firestore, 'users', user.uid, 'flocks', selectedSale.flockId);
-                updateDocumentNonBlocking(originalFlockDocRef, { count: originalFlock.count });
-            }
-            return;
-        }
-        const newFlockDocRef = doc(firestore, 'users', user.uid, 'flocks', values.flockId);
-        updateDocumentNonBlocking(newFlockDocRef, { count: flockToUpdate.count - values.quantity });
+    // Revert original inventory change
+    updateInventory(originalSaleData.flockId, originalSaleData.quantity, originalSaleData.saleType as 'Birds' | 'Eggs');
 
-    } else { // Flock is the same, just adjust quantity
-        if (quantityDifference > flockToUpdate.count) {
-            toast({ variant: "destructive", title: "Not enough birds", description: `Cannot update sale. You only have ${flockToUpdate.count} birds remaining in the flock.` });
-            return;
-        }
-        const newFlockCount = flockToUpdate.count - quantityDifference;
-        const flockDocRef = doc(firestore, 'users', user.uid, 'flocks', values.flockId);
-        updateDocumentNonBlocking(flockDocRef, { count: newFlockCount });
+    // Check if there's enough new inventory
+    if (values.saleType === 'Birds' && values.quantity > flockToUpdate.count) {
+        toast({ variant: "destructive", title: "Not enough birds", description: `The selected flock only has ${flockToUpdate.count} birds.` });
+        // Rollback the inventory reversion
+        updateInventory(originalSaleData.flockId, -originalSaleData.quantity, originalSaleData.saleType as 'Birds' | 'Eggs');
+        return;
     }
+     if (values.saleType === 'Eggs' && values.quantity > (flockToUpdate.totalEggsCollected || 0)) {
+        toast({ variant: "destructive", title: "Not enough eggs", description: `You only have ${flockToUpdate.totalEggsCollected || 0} eggs recorded.`});
+        updateInventory(originalSaleData.flockId, -originalSaleData.quantity, originalSaleData.saleType as 'Birds' | 'Eggs');
+        return;
+    }
+
+    // Apply new inventory change
+    updateInventory(values.flockId, -values.quantity, values.saleType);
 
     const total = values.quantity * values.pricePerUnit;
     const updatedSale = {
@@ -188,25 +205,21 @@ export default function SalesPage() {
   function handleDeleteSale(sale: Sale) {
     if (!user || !flocks) return;
     
-    const flockToRestore = flocks.find(f => f.id === sale.flockId);
-    if (flockToRestore) {
-        const newCount = flockToRestore.count + sale.quantity;
-        const flockDocRef = doc(firestore, 'users', user.uid, 'flocks', sale.flockId);
-        updateDocumentNonBlocking(flockDocRef, { count: newCount });
-    }
+    // Add back the sold items to inventory
+    updateInventory(sale.flockId, sale.quantity, sale.saleType);
 
     const saleDocRef = doc(firestore, 'users', user.uid, 'sales', sale.id);
     deleteDocumentNonBlocking(saleDocRef);
     toast({
       title: "Sale Deleted",
-      description: `The sale record has been deleted and ${sale.quantity} birds have been added back to the flock.`,
+      description: `The sale has been deleted and items have been returned to inventory.`,
       variant: "destructive"
     });
   }
 
   const handleEditClick = (sale: Sale) => {
     setSelectedSale(sale);
-    setOriginalSaleQuantity(sale.quantity);
+    setOriginalSaleData({ quantity: sale.quantity, flockId: sale.flockId, saleType: sale.saleType });
     form.reset({
         ...sale,
         saleDate: sale.saleDate.toDate(),
@@ -232,7 +245,7 @@ export default function SalesPage() {
                 <SelectContent>
                     {flocks?.map((flock) => (
                     <SelectItem key={flock.id} value={flock.id} disabled={flock.count === 0 && (!selectedSale || selectedSale.flockId !== flock.id)}>
-                        {flock.breed} ({flock.count} birds)
+                        {flock.breed} ({flock.type} - {flock.count} birds)
                     </SelectItem>
                     ))}
                 </SelectContent>
@@ -241,13 +254,36 @@ export default function SalesPage() {
             </FormItem>
             )}
         />
+        {selectedFlockForForm?.type === 'Layer' && (
+             <FormField
+                control={form.control}
+                name="saleType"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Sale Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Select what was sold" />
+                        </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        <SelectItem value="Birds">Birds</SelectItem>
+                        <SelectItem value="Eggs">Eggs (by dozen)</SelectItem>
+                    </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        )}
         <div className="grid grid-cols-2 gap-4">
             <FormField
                 control={form.control}
                 name="quantity"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Quantity Sold</FormLabel>
+                    <FormLabel>{watchSaleType === 'Eggs' ? 'Quantity (Dozens)' : 'Quantity Sold'}</FormLabel>
                     <FormControl>
                     <Input type="number" placeholder="e.g., 50" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} />
                     </FormControl>
@@ -260,7 +296,7 @@ export default function SalesPage() {
                 name="pricePerUnit"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Price per Bird ({currencySymbol})</FormLabel>
+                    <FormLabel>{watchSaleType === 'Eggs' ? 'Price per Dozen' : 'Price per Bird'} ({currencySymbol})</FormLabel>
                     <FormControl>
                     <Input type="number" step="0.01" placeholder="e.g., 12.50" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
                     </FormControl>
@@ -272,7 +308,7 @@ export default function SalesPage() {
          <FormItem>
             <FormLabel>Total Amount ({currencySymbol})</FormLabel>
             <FormControl>
-                <Input type="text" readOnly value={`${currencySymbol}${calculatedTotal.toFixed(2)}`} className="font-semibold bg-muted" />
+                <Input type="text" readOnly value={`${calculatedTotal.toFixed(2)}`} className="font-semibold bg-muted" />
             </FormControl>
              <FormMessage />
         </FormItem>
@@ -334,7 +370,7 @@ export default function SalesPage() {
           </CardHeader>
           <CardContent>
             <Button className="w-full" onClick={() => {
-                form.reset({ flockId: '', quantity: 10, pricePerUnit: 10, customer: '', saleDate: new Date(), total: 100 });
+                form.reset({ flockId: '', saleType: 'Birds', quantity: 10, pricePerUnit: 10, customer: '', saleDate: new Date(), total: 100 });
                 setAddSaleOpen(true);
             }}>
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -394,6 +430,7 @@ export default function SalesPage() {
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>Flock</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead className="text-right">Quantity</TableHead>
                   <TableHead className="text-right">Total</TableHead>
@@ -403,14 +440,14 @@ export default function SalesPage() {
               <TableBody>
                 {isLoadingSales && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center">
+                    <TableCell colSpan={7} className="text-center">
                       <Loader2 className="mx-auto h-8 w-8 animate-spin" />
                     </TableCell>
                   </TableRow>
                 )}
                 {!isLoadingSales && sales?.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center">
+                    <TableCell colSpan={7} className="text-center">
                       No sales recorded yet.
                     </TableCell>
                   </TableRow>
@@ -419,8 +456,9 @@ export default function SalesPage() {
                   <TableRow key={sale.id}>
                     <TableCell>{format(sale.saleDate.toDate(), 'yyyy-MM-dd')}</TableCell>
                     <TableCell>{flocks?.find(f => f.id === sale.flockId)?.breed || sale.flockId.substring(0,6)}</TableCell>
+                    <TableCell>{sale.saleType}</TableCell>
                     <TableCell>{sale.customer}</TableCell>
-                    <TableCell className="text-right">{sale.quantity}</TableCell>
+                    <TableCell className="text-right">{sale.quantity.toLocaleString()}</TableCell>
                     <TableCell className="text-right">{formatCurrency(sale.total)}</TableCell>
                     <TableCell className="text-right">
                         <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={() => handleEditClick(sale)}>
@@ -436,7 +474,7 @@ export default function SalesPage() {
                                 <AlertDialogHeader>
                                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete this sale record and add the sold birds back to the flock.
+                                    This action cannot be undone. This will permanently delete this sale record and add the sold items back to the flock inventory.
                                 </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -458,5 +496,3 @@ export default function SalesPage() {
     </div>
   );
 }
-
-    
