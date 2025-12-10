@@ -110,6 +110,9 @@ service cloud.firestore {
       match /expenditures/{expenditureId} {
         allow get, list, create, update, delete: if isOwner(userId);
       }
+      match /contacts/{contactId} {
+        allow get, list, create, update, delete: if isOwner(userId);
+      }
     }
 
     // -------------------------------------------------------------------------

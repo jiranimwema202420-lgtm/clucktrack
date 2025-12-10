@@ -96,6 +96,23 @@
         "currency": { "type": "string", "description": "The user's preferred currency." }
       },
       "required": ["id", "email"]
+    },
+    "Contact": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Contact",
+      "type": "object",
+      "description": "Represents a supplier or buyer.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the Contact." },
+        "name": { "type": "string", "description": "The name of the contact or company." },
+        "type": { "type": "string", "enum": ["Supplier", "Buyer"], "description": "The type of contact." },
+        "contactPerson": { "type": "string", "description": "The primary contact person's name." },
+        "email": { "type": "string", "format": "email", "description": "The contact's email address." },
+        "phone": { "type": "string", "description": "The contact's phone number." },
+        "address": { "type": "string", "description": "The contact's physical address." },
+        "products": { "type": "string", "description": "Products they supply or buy (comma-separated)." }
+      },
+      "required": ["id", "name", "type", "email"]
     }
   },
   "auth": {
@@ -145,6 +162,14 @@
           "entityName": "SensorData",
           "schema": { "$ref": "#/entities/SensorData" },
           "description": "Stores sensor data for a user. Only the user can read/write their own sensor data."
+        }
+      },
+      {
+        "path": "/users/{userId}/contacts/{contactId}",
+        "definition": {
+          "entityName": "Contact",
+          "schema": { "$ref": "#/entities/Contact" },
+          "description": "Stores supplier/buyer contacts for a user. Only the user can read/write their own contacts."
         }
       },
       {

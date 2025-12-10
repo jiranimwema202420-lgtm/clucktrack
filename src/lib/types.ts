@@ -104,3 +104,17 @@ export interface UserProfile {
   farmContact?: string;
   currency?: string;
 }
+
+export const contactSchema = z.object({
+    name: z.string().min(2, 'Name must be at least 2 characters.'),
+    type: z.enum(['Supplier', 'Buyer'], { required_error: 'Please select a contact type.'}),
+    contactPerson: z.string().optional(),
+    email: z.string().email('Please enter a valid email address.'),
+    phone: z.string().optional(),
+    address: z.string().optional(),
+    products: z.string().optional(),
+  });
+  
+  export interface Contact extends z.infer<typeof contactSchema> {
+    id: string;
+  }

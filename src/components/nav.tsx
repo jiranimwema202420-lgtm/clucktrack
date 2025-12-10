@@ -13,7 +13,8 @@ import {
   FileOutput,
   MessageSquare,
   Settings,
-  LifeBuoy
+  LifeBuoy,
+  Users
 } from 'lucide-react';
 import {
   SidebarHeader,
@@ -38,6 +39,7 @@ const navGroups = [
             { href: '/inventory', label: 'Inventory', icon: Boxes },
             { href: '/sales', label: 'Sales', icon: DollarSign },
             { href: '/expenditure', label: 'Expenditure', icon: ShoppingCart },
+            { href: '/contacts', label: 'Contacts', icon: Users },
         ]
     },
     {
