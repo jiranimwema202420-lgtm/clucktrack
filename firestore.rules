@@ -113,6 +113,9 @@ service cloud.firestore {
       match /contacts/{contactId} {
         allow get, list, create, update, delete: if isOwner(userId);
       }
+      match /sensorData/{sensorDataId} {
+        allow get, list, create, update, delete: if isOwner(userId);
+      }
     }
 
     // -------------------------------------------------------------------------
