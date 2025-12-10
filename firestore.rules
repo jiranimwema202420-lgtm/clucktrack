@@ -88,11 +88,10 @@ service cloud.firestore {
     // -------------------------------------------------------------------------
 
     /**
-     * @description Manages user profile documents.
+     * @description Manages user profile documents and their subcollections.
      * @path /users/{userId}
-     * @allow (create) An authenticated user can create their own profile document.
-     * @deny (list) Another user cannot list all user profiles.
-     * @principle Restricts access to a user's own data tree and prevents user enumeration.
+     * @allow (get, create, update, delete) A user can manage their own profile.
+     * @deny (list) Prevents listing all user profiles to protect privacy.
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
@@ -101,20 +100,21 @@ service cloud.firestore {
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
 
+      // Rules for all user-owned subcollections
       match /flocks/{flockId} {
-        allow get, list, create, update, delete: if isOwner(userId);
+        allow read, write: if isOwner(userId);
       }
       match /sales/{saleId} {
-        allow get, list, create, update, delete: if isOwner(userId);
+        allow read, write: if isOwner(userId);
       }
       match /expenditures/{expenditureId} {
-        allow get, list, create, update, delete: if isOwner(userId);
+        allow read, write: if isOwner(userId);
       }
       match /contacts/{contactId} {
-        allow get, list, create, update, delete: if isOwner(userId);
+        allow read, write: if isOwner(userId);
       }
       match /sensorData/{sensorDataId} {
-        allow get, list, create, update, delete: if isOwner(userId);
+        allow read, write: if isOwner(userId);
       }
     }
 
@@ -125,31 +125,21 @@ service cloud.firestore {
     /**
      * @description A global catalog of feed types.
      * @path /feeds/{feedId}
-     * @allow (list) Any authenticated user can list all available feed types.
-     * @deny (create) A non-admin user cannot create a new feed type.
-     * @principle Allows public read for authenticated users but restricts writes to admins.
+     * @allow (read) Any authenticated user can read feed types.
+     * @allow (write) Only admins can manage feed types.
      */
     match /feeds/{feedId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isAdmin();
-      allow update: if isAdmin() && isExistingDoc();
-      allow delete: if isAdmin() && isExistingDoc();
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     /**
      * @description Manages admin role grants. Document existence confers admin rights.
      * @path /roles_admin/{userId}
-     * @allow (create) An existing admin can grant admin rights to another user.
-     * @deny (delete) A non-admin user cannot revoke admin rights.
-     * @principle Secures role management by restricting modifications to existing admins.
+     * @allow (read, write) Only admins can manage roles.
      */
     match /roles_admin/{userId} {
-      allow get: if isAdmin();
-      allow list: if isAdmin();
-      allow create: if isAdmin();
-      allow update: if false;
-      allow delete: if isAdmin() && isExistingDoc();
+      allow read, write: if isAdmin();
     }
   }
 }
