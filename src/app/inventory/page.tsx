@@ -198,7 +198,8 @@ export default function InventoryPage() {
     setSelectedFlock(flock);
     form.reset({
         ...flock,
-        hatchDate: flock.hatchDate.toDate()
+        hatchDate: flock.hatchDate.toDate(),
+        totalCost: flock.totalCost || 0,
     });
     setEditFlockOpen(true);
   }
@@ -231,7 +232,7 @@ export default function InventoryPage() {
     return `$${cost.toFixed(2)}`;
   }
 
-  const FormFields = () => (
+  const FormFields = ({ isEdit = false }: { isEdit?: boolean }) => (
     <div className="space-y-4">
         <FormField
             control={form.control}
@@ -254,7 +255,7 @@ export default function InventoryPage() {
             <FormItem>
                 <FormLabel>Initial Quantity</FormLabel>
                 <FormControl>
-                <Input type="number" {...field} />
+                <Input type="number" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} />
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -267,7 +268,7 @@ export default function InventoryPage() {
             <FormItem>
                 <FormLabel>Current Quantity</FormLabel>
                 <FormControl>
-                <Input type="number" {...field} />
+                <Input type="number" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} />
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -323,7 +324,7 @@ export default function InventoryPage() {
             <FormItem>
                 <FormLabel>Avg. Weight (kg)</FormLabel>
                 <FormControl>
-                <Input type="number" step="0.01" {...field} />
+                <Input type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -336,7 +337,7 @@ export default function InventoryPage() {
             <FormItem>
                 <FormLabel>Total Feed (kg)</FormLabel>
                 <FormControl>
-                <Input type="number" step="0.1" {...field} />
+                <Input type="number" step="0.1" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} readOnly={isEdit} />
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -350,7 +351,7 @@ export default function InventoryPage() {
             <FormItem>
                 <FormLabel>Total Cost ($)</FormLabel>
                 <FormControl>
-                <Input type="number" step="0.01" {...field} />
+                <Input type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} readOnly={isEdit} />
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -415,7 +416,7 @@ export default function InventoryPage() {
                                     <FormItem>
                                         <FormLabel>Number of Losses</FormLabel>
                                         <FormControl>
-                                            <Input type="number" placeholder="e.g., 5" {...field} />
+                                            <Input type="number" placeholder="e.g., 5" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -476,12 +477,12 @@ export default function InventoryPage() {
                 <DialogHeader>
                   <DialogTitle>Edit Flock</DialogTitle>
                   <DialogDescription>
-                    Update the details for this flock.
+                    Update the details for this flock. Cost and Feed are auto-calculated from expenditures.
                   </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onEditFlockSubmit)} className="space-y-4 py-4">
-                    <FormFields />
+                    <FormFields isEdit={true} />
                      <DialogFooter>
                         <DialogClose asChild>
                             <Button type="button" variant="secondary">Cancel</Button>

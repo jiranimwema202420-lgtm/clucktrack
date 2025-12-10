@@ -67,6 +67,7 @@ export const expenditureSchema = z.object({
   amount: z.coerce.number(),
   description: z.string().optional(),
   expenditureDate: z.date({ required_error: 'Please select an expenditure date.' }),
+  flockId: z.string().optional(),
 });
 
 export interface Expenditure extends z.infer<typeof expenditureSchema> { 

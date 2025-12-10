@@ -43,7 +43,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Calendar as CalendarIcon, Loader2, Trash2, Pencil } from 'lucide-react';
-import type { Expenditure } from '@/lib/types';
+import type { Expenditure, Flock } from '@/lib/types';
 import { expenditureSchema } from '@/lib/types';
 import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, Timestamp, doc } from 'firebase/firestore';
@@ -52,11 +52,13 @@ import { z } from 'zod';
 export const dynamic = 'force-dynamic';
 
 const expenditureCategories = ['Feed', 'Medicine', 'Utilities', 'Labor', 'Equipment', 'Maintenance', 'Day Old Chicks', 'Other'];
+const flockRelatedCategories = ['Feed', 'Medicine', 'Maintenance'];
 
 export default function ExpenditurePage() {
   const [isAddExpenseOpen, setAddExpenseOpen] = useState(false);
   const [isEditExpenseOpen, setEditExpenseOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<Expenditure | null>(null);
+  const [isAddFlockOpen, setAddFlockOpen] = useState(false);
   
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
@@ -67,6 +69,13 @@ export default function ExpenditurePage() {
   }, [firestore, user]);
 
   const { data: expenditures, isLoading } = useCollection<Expenditure>(expendituresRef);
+  
+  const flocksRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(firestore, 'users', user.uid, 'flocks');
+  }, [firestore, user]);
+
+  const { data: flocks, isLoading: isLoadingFlocks } = useCollection<Flock>(flocksRef);
 
   const form = useForm<z.infer<typeof expenditureSchema>>({
     resolver: zodResolver(expenditureSchema),
@@ -76,11 +85,13 @@ export default function ExpenditurePage() {
       unitPrice: 0,
       description: '',
       expenditureDate: new Date(),
+      flockId: '',
     },
   });
 
   const watchQuantity = form.watch('quantity');
   const watchUnitPrice = form.watch('unitPrice');
+  const watchCategory = form.watch('category');
   const [calculatedAmount, setCalculatedAmount] = useState(0);
 
   useEffect(() => {
@@ -91,28 +102,58 @@ export default function ExpenditurePage() {
     form.setValue('amount', amount, { shouldValidate: true });
   }, [watchQuantity, watchUnitPrice, form]);
 
+  async function updateFlockTotals(flockId: string, amountChange: number, feedChange: number) {
+    if (!user || !flocks) return;
+    const flockToUpdate = flocks.find(f => f.id === flockId);
+    if (!flockToUpdate) return;
+    
+    const flockDocRef = doc(firestore, 'users', user.uid, 'flocks', flockId);
+    const newTotalCost = (flockToUpdate.totalCost || 0) + amountChange;
+    const newTotalFeed = (flockToUpdate.totalFeedConsumed || 0) + feedChange;
+
+    await updateDocumentNonBlocking(flockDocRef, {
+        totalCost: newTotalCost,
+        totalFeedConsumed: newTotalFeed,
+    });
+  }
+
   function onSubmit(values: z.infer<typeof expenditureSchema>) {
-    if (!expendituresRef) return;
+    if (!expendituresRef || !user) return;
+    
+    if (values.category === 'Day Old Chicks') {
+        // Trigger Add Flock dialog instead of creating an expense
+        // You might want to pass some data to the Add Flock form
+        toast({
+            title: "New Flock Detected",
+            description: "Please enter the details for your new flock of chicks.",
+        });
+        setAddExpenseOpen(false); // Close expense dialog
+        setAddFlockOpen(true); // Open flock dialog
+        // Pre-fill flock form if you have another form instance for it.
+        // For now, we just open the dialog.
+        return;
+    }
+
     const amount = values.quantity * values.unitPrice;
     if (amount <= 0) {
-      toast({
-        variant: "destructive",
-        title: "Invalid Amount",
-        description: "Total amount must be greater than zero.",
-      });
+      toast({ variant: "destructive", title: "Invalid Amount", description: "Total amount must be greater than zero." });
       return;
     }
-    const newExpenditure = {
-      ...values,
-      expenditureDate: Timestamp.fromDate(values.expenditureDate),
-      amount: amount
-    };
+
+    if (flockRelatedCategories.includes(values.category) && !values.flockId) {
+        toast({ variant: "destructive", title: "Flock Required", description: "Please select a flock for this expenditure category." });
+        return;
+    }
+    
+    const newExpenditure = { ...values, expenditureDate: Timestamp.fromDate(values.expenditureDate), amount: amount };
     addDocumentNonBlocking(expendituresRef, newExpenditure);
 
-    toast({
-      title: 'Expenditure Recorded',
-      description: `Recorded $${amount.toFixed(2)} for ${values.category}.`,
-    });
+    if (values.flockId) {
+        const feedChange = values.category === 'Feed' ? values.quantity : 0;
+        updateFlockTotals(values.flockId, amount, feedChange);
+    }
+
+    toast({ title: 'Expenditure Recorded', description: `Recorded $${amount.toFixed(2)} for ${values.category}.` });
     form.reset();
     setAddExpenseOpen(false);
   }
@@ -121,37 +162,44 @@ export default function ExpenditurePage() {
     if (!user || !selectedExpense) return;
     const amount = values.quantity * values.unitPrice;
     if (amount <= 0) {
-      toast({
-        variant: "destructive",
-        title: "Invalid Amount",
-        description: "Total amount must be greater than zero.",
-      });
+      toast({ variant: "destructive", title: "Invalid Amount", description: "Total amount must be greater than zero." });
       return;
     }
     const expenditureDocRef = doc(firestore, 'users', user.uid, 'expenditures', selectedExpense.id);
-    const updatedExpenditure = {
-        ...values,
-        expenditureDate: Timestamp.fromDate(values.expenditureDate),
-        amount: amount,
-    };
+    const updatedExpenditure = { ...values, expenditureDate: Timestamp.fromDate(values.expenditureDate), amount: amount };
     updateDocumentNonBlocking(expenditureDocRef, updatedExpenditure);
-    toast({
-        title: "Expenditure Updated",
-        description: "The expenditure record has been updated."
-    });
+
+    // Calculate changes and update flock
+    const amountDifference = amount - selectedExpense.amount;
+    const oldFeedAmount = selectedExpense.category === 'Feed' ? selectedExpense.quantity : 0;
+    const newFeedAmount = values.category === 'Feed' ? values.quantity : 0;
+    const feedDifference = newFeedAmount - oldFeedAmount;
+    
+    // If flock association changed, revert old and apply to new
+    if (selectedExpense.flockId && selectedExpense.flockId !== values.flockId) {
+        updateFlockTotals(selectedExpense.flockId, -selectedExpense.amount, -oldFeedAmount);
+    }
+    if (values.flockId) {
+        updateFlockTotals(values.flockId, amountDifference, feedDifference);
+    }
+
+
+    toast({ title: "Expenditure Updated", description: "The expenditure record has been updated." });
     setEditExpenseOpen(false);
     setSelectedExpense(null);
   }
 
-  function handleDeleteExpenditure(expenditureId: string) {
+  function handleDeleteExpenditure(expense: Expenditure) {
     if (!user) return;
-    const expenditureDocRef = doc(firestore, 'users', user.uid, 'expenditures', expenditureId);
+    const expenditureDocRef = doc(firestore, 'users', user.uid, 'expenditures', expense.id);
     deleteDocumentNonBlocking(expenditureDocRef);
-    toast({
-      title: "Expenditure Deleted",
-      description: "The expenditure record has been deleted.",
-      variant: "destructive"
-    });
+
+    if (expense.flockId) {
+        const feedChange = expense.category === 'Feed' ? expense.quantity : 0;
+        updateFlockTotals(expense.flockId, -expense.amount, -feedChange);
+    }
+
+    toast({ title: "Expenditure Deleted", description: "The expenditure record has been deleted.", variant: "destructive" });
   }
   
   const handleEditClick = (expense: Expenditure) => {
@@ -189,6 +237,34 @@ export default function ExpenditurePage() {
             </FormItem>
             )}
         />
+
+        {flockRelatedCategories.includes(watchCategory) && (
+             <FormField
+                control={form.control}
+                name="flockId"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Assign to Flock</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                        <SelectTrigger disabled={isLoadingFlocks}>
+                        <SelectValue placeholder="Select a flock" />
+                        </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        {flocks?.map((flock) => (
+                        <SelectItem key={flock.id} value={flock.id}>
+                            {flock.breed} ({flock.count} birds)
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        )}
+
         <div className="grid grid-cols-2 gap-4">
           <FormField
               control={form.control}
@@ -197,7 +273,7 @@ export default function ExpenditurePage() {
               <FormItem>
                   <FormLabel>Quantity</FormLabel>
                   <FormControl>
-                  <Input type="number" placeholder="e.g., 10" {...field} />
+                  <Input type="number" placeholder="e.g., 10" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} />
                   </FormControl>
                   <FormMessage />
               </FormItem>
@@ -210,7 +286,7 @@ export default function ExpenditurePage() {
               <FormItem>
                   <FormLabel>Unit Price ($)</FormLabel>
                   <FormControl>
-                  <Input type="number" step="0.01" placeholder="e.g., 25.00" {...field} />
+                  <Input type="number" step="0.01" placeholder="e.g., 25.00" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
                   </FormControl>
                   <FormMessage />
               </FormItem>
@@ -282,7 +358,7 @@ export default function ExpenditurePage() {
           </CardHeader>
           <CardContent>
             <Button className="w-full" onClick={() => {
-                form.reset({ category: '', quantity: 1, unitPrice: 0, description: '', expenditureDate: new Date() });
+                form.reset({ category: '', quantity: 1, unitPrice: 0, description: '', expenditureDate: new Date(), flockId: '' });
                 setAddExpenseOpen(true);
             }}>
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -309,6 +385,24 @@ export default function ExpenditurePage() {
                 </Form>
             </DialogContent>
        </Dialog>
+        
+        {/* Dummy Add Flock Dialog, assuming you have one in inventory page that can be opened */}
+        <Dialog open={isAddFlockOpen} onOpenChange={setAddFlockOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Add New Flock</DialogTitle>
+                    <DialogDescription>
+                        This would be your new flock form. For now, this is a placeholder.
+                        The real 'Add Flock' dialog lives on the Inventory page.
+                        This was triggered from recording a 'Day Old Chicks' expense.
+                    </DialogDescription>
+                </DialogHeader>
+                 <DialogFooter className="mt-4">
+                    <DialogClose asChild><Button variant="secondary" type="button" onClick={() => setAddFlockOpen(false)}>Close</Button></DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
 
        <Dialog open={isEditExpenseOpen} onOpenChange={setEditExpenseOpen}>
             <DialogContent>
@@ -384,12 +478,12 @@ export default function ExpenditurePage() {
                                 <AlertDialogHeader>
                                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete this expenditure record.
+                                This action cannot be undone. This will permanently delete this expenditure record and update flock totals.
                                 </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDeleteExpenditure(expense.id)}>
+                                <AlertDialogAction onClick={() => handleDeleteExpenditure(expense)}>
                                     Delete
                                 </AlertDialogAction>
                                 </AlertDialogFooter>
