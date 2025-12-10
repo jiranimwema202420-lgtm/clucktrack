@@ -1,87 +1,58 @@
 {
   "entities": {
-    "Poultry": {
+    "Flock": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Poultry",
+      "title": "Flock",
       "type": "object",
-      "description": "Represents a single poultry bird.",
+      "description": "Represents a flock of poultry.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Poultry entity."
-        },
-        "batchId": {
-          "type": "string",
-          "description": "Reference to Batch. (Relationship: Batch 1:N Poultry)"
-        },
-        "species": {
-          "type": "string",
-          "description": "The species of poultry (e.g., chicken, turkey, duck)."
-        },
-        "breed": {
-          "type": "string",
-          "description": "The breed of poultry (e.g., broiler, layer)."
-        },
-        "hatchDate": {
-          "type": "string",
-          "description": "The date the poultry hatched.",
-          "format": "date-time"
-        },
-        "weight": {
-          "type": "number",
-          "description": "The current weight of the poultry in kilograms."
-        },
-        "healthStatus": {
-          "type": "string",
-          "description": "The current health status of the poultry (e.g., healthy, sick)."
-        }
+        "id": { "type": "string", "description": "Unique identifier for the Flock." },
+        "breed": { "type": "string", "description": "The breed of the flock." },
+        "type": { "type": "string", "enum": ["Broiler", "Layer"], "description": "The type of flock." },
+        "count": { "type": "number", "description": "The current number of birds in the flock." },
+        "initialCount": { "type": "number", "description": "The initial number of birds when the flock was created." },
+        "averageWeight": { "type": "number", "description": "The average weight of a bird in the flock (in kg)." },
+        "hatchDate": { "type": "string", "format": "date-time", "description": "The date the flock hatched." },
+        "totalFeedConsumed": { "type": "number", "description": "The total amount of feed consumed by the flock (in kg)." },
+        "totalCost": { "type": "number", "description": "The total cost associated with the flock." },
+        "eggProductionRate": { "type": "number", "description": "The egg production rate for layer flocks (as a percentage)." },
+        "totalEggsCollected": { "type": "number", "description": "The total number of eggs collected from the flock." }
       },
-      "required": [
-        "id",
-        "batchId",
-        "species",
-        "breed",
-        "hatchDate",
-        "weight",
-        "healthStatus"
-      ]
+      "required": ["id", "breed", "type", "count", "initialCount", "hatchDate"]
     },
-    "Batch": {
+    "Sale": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Batch",
+      "title": "Sale",
       "type": "object",
-      "description": "Represents a batch of poultry.",
+      "description": "Represents a sales transaction.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Batch entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the batch."
-        },
-        "startDate": {
-          "type": "string",
-          "description": "The date the batch was started.",
-          "format": "date-time"
-        },
-        "expectedEndDate": {
-          "type": "string",
-          "description": "The expected end date of the batch.",
-          "format": "date-time"
-        },
-        "initialQuantity": {
-          "type": "number",
-          "description": "The initial quantity of poultry in the batch."
-        }
+        "id": { "type": "string", "description": "Unique identifier for the Sale." },
+        "flockId": { "type": "string", "description": "Reference to the Flock from which the sale was made." },
+        "saleType": { "type": "string", "enum": ["Birds", "Eggs"], "description": "The type of item sold." },
+        "quantity": { "type": "number", "description": "The quantity of items sold." },
+        "pricePerUnit": { "type": "number", "description": "The price per unit sold." },
+        "total": { "type": "number", "description": "The total amount from the sale." },
+        "customer": { "type": "string", "description": "The name of the customer." },
+        "saleDate": { "type": "string", "format": "date-time", "description": "The date the sale was made." }
       },
-      "required": [
-        "id",
-        "name",
-        "startDate",
-        "expectedEndDate",
-        "initialQuantity"
-      ]
+      "required": ["id", "flockId", "saleType", "quantity", "pricePerUnit", "total", "customer", "saleDate"]
+    },
+    "Expenditure": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Expenditure",
+      "type": "object",
+      "description": "Represents a farm expenditure.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the Expenditure." },
+        "category": { "type": "string", "description": "The category of the expenditure." },
+        "quantity": { "type": "number", "description": "The quantity of items purchased." },
+        "unitPrice": { "type": "number", "description": "The price per unit." },
+        "amount": { "type": "number", "description": "The total amount of the expenditure." },
+        "description": { "type": "string", "description": "A description of the expenditure." },
+        "expenditureDate": { "type": "string", "format": "date-time", "description": "The date of the expenditure." },
+        "flockId": { "type": "string", "description": "Optional reference to the Flock this expenditure is for." }
+      },
+      "required": ["id", "category", "quantity", "unitPrice", "amount", "expenditureDate"]
     },
     "SensorData": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -89,40 +60,13 @@
       "type": "object",
       "description": "Represents sensor data collected from farm equipment.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the SensorData entity."
-        },
-        "timestamp": {
-          "type": "string",
-          "description": "The timestamp of the sensor data.",
-          "format": "date-time"
-        },
-        "temperature": {
-          "type": "number",
-          "description": "The temperature reading in Celsius."
-        },
-        "humidity": {
-          "type": "number",
-          "description": "The humidity reading in percentage."
-        },
-        "feedLevel": {
-          "type": "number",
-          "description": "The feed level reading in kilograms."
-        },
-        "waterLevel": {
-          "type": "number",
-          "description": "The water level reading in liters."
-        }
+        "id": { "type": "string", "description": "Unique identifier for the SensorData entity." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "The timestamp of the sensor data." },
+        "temperature": { "type": "number", "description": "The temperature reading in Celsius." },
+        "humidity": { "type": "number", "description": "The humidity reading in percentage." },
+        "ammoniaLevel": { "type": "number", "description": "The ammonia level in ppm." }
       },
-      "required": [
-        "id",
-        "timestamp",
-        "temperature",
-        "humidity",
-        "feedLevel",
-        "waterLevel"
-      ]
+      "required": ["id", "timestamp", "temperature", "humidity", "ammoniaLevel"]
     },
     "Feed": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -130,104 +74,12 @@
       "type": "object",
       "description": "Represents a type of feed.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Feed entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the feed."
-        },
-        "nutrientComposition": {
-          "type": "string",
-          "description": "The nutrient composition of the feed."
-        },
-        "costPerUnit": {
-          "type": "number",
-          "description": "The cost per unit of the feed."
-        }
+        "id": { "type": "string", "description": "Unique identifier for the Feed entity." },
+        "name": { "type": "string", "description": "The name of the feed." },
+        "nutrientComposition": { "type": "string", "description": "The nutrient composition of the feed." },
+        "costPerUnit": { "type": "number", "description": "The cost per unit of the feed." }
       },
-      "required": [
-        "id",
-        "name",
-        "nutrientComposition",
-        "costPerUnit"
-      ]
-    },
-    "FeedConsumption": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "FeedConsumption",
-      "type": "object",
-      "description": "Represents the consumption of feed by a batch.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the FeedConsumption entity."
-        },
-        "batchId": {
-          "type": "string",
-          "description": "Reference to Batch. (Relationship: Batch 1:N FeedConsumption)"
-        },
-        "feedId": {
-          "type": "string",
-          "description": "Reference to Feed. (Relationship: Feed 1:N FeedConsumption)"
-        },
-        "date": {
-          "type": "string",
-          "description": "The date of the feed consumption.",
-          "format": "date-time"
-        },
-        "quantity": {
-          "type": "number",
-          "description": "The quantity of feed consumed."
-        }
-      },
-      "required": [
-        "id",
-        "batchId",
-        "feedId",
-        "date",
-        "quantity"
-      ]
-    },
-    "Alert": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Alert",
-      "type": "object",
-      "description": "Represents an alert generated by the system.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Alert entity."
-        },
-        "timestamp": {
-          "type": "string",
-          "description": "The timestamp of the alert.",
-          "format": "date-time"
-        },
-        "type": {
-          "type": "string",
-          "description": "The type of alert (e.g., health, environment)."
-        },
-        "message": {
-          "type": "string",
-          "description": "The message of the alert."
-        },
-        "batchId": {
-          "type": "string",
-          "description": "Reference to Batch. (Relationship: Batch 1:N Alert)"
-        },
-        "poultryId": {
-          "type": "string",
-          "description": "Reference to Poultry. (Relationship: Poultry 1:N Alert)"
-        }
-      },
-      "required": [
-        "id",
-        "timestamp",
-        "type",
-        "message"
-      ]
+      "required": ["id", "name", "costPerUnit"]
     },
     "User": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -235,36 +87,22 @@
       "type": "object",
       "description": "Represents a user of the system.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the User entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the user."
-        },
-        "email": {
-          "type": "string",
-          "description": "The email address of the user.",
-          "format": "email"
-        },
-        "role": {
-          "type": "string",
-          "description": "The role of the user (e.g., admin, worker, vet)."
-        }
+        "id": { "type": "string", "description": "Unique identifier for the User entity." },
+        "displayName": { "type": "string", "description": "The display name of the user." },
+        "email": { "type": "string", "format": "email", "description": "The email address of the user." },
+        "farmName": { "type": "string", "description": "The name of the user's farm." },
+        "farmLocation": { "type": "string", "description": "The location of the user's farm." },
+        "farmContact": { "type": "string", "description": "The contact information for the farm." },
+        "currency": { "type": "string", "description": "The user's preferred currency." }
       },
-      "required": [
-        "id",
-        "name",
-        "email",
-        "role"
-      ]
+      "required": ["id", "email"]
     }
   },
   "auth": {
     "providers": [
       "password",
-      "anonymous"
+      "anonymous",
+      "google.com"
     ]
   },
   "firestore": {
@@ -273,16 +111,48 @@
         "path": "/users/{userId}",
         "definition": {
           "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user profile data. Only the user can read/write their own document.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user."
-            }
-          ]
+          "schema": { "$ref": "#/entities/User" },
+          "description": "Stores user profile data. Only the user can read/write their own document."
+        }
+      },
+      {
+        "path": "/users/{userId}/flocks/{flockId}",
+        "definition": {
+          "entityName": "Flock",
+          "schema": { "$ref": "#/entities/Flock" },
+          "description": "Stores flock data for a user. Only the user can read/write their own flocks."
+        }
+      },
+      {
+        "path": "/users/{userId}/sales/{saleId}",
+        "definition": {
+          "entityName": "Sale",
+          "schema": { "$ref": "#/entities/Sale" },
+          "description": "Stores sales data for a user. Only the user can read/write their own sales."
+        }
+      },
+      {
+        "path": "/users/{userId}/expenditures/{expenditureId}",
+        "definition": {
+          "entityName": "Expenditure",
+          "schema": { "$ref": "#/entities/Expenditure" },
+          "description": "Stores expenditure data for a user. Only the user can read/write their own expenditures."
+        }
+      },
+      {
+        "path": "/users/{userId}/sensorData/{sensorDataId}",
+        "definition": {
+          "entityName": "SensorData",
+          "schema": { "$ref": "#/entities/SensorData" },
+          "description": "Stores sensor data for a user. Only the user can read/write their own sensor data."
+        }
+      },
+      {
+        "path": "/feeds/{feedId}",
+        "definition": {
+          "entityName": "Feed",
+          "schema": { "$ref": "#/entities/Feed" },
+          "description": "Stores global feed data. Readable by all authenticated users, writable by admins."
         }
       },
       {
@@ -290,146 +160,14 @@
         "definition": {
           "entityName": "AdminRole",
           "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Marks a user as an admin. The existence of this document grants admin privileges.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user."
+            "type": "object",
+            "properties": {
+              "isAdmin": { "type": "boolean" }
             }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/batches/{batchId}",
-        "definition": {
-          "entityName": "Batch",
-          "schema": {
-            "$ref": "#/backend/entities/Batch"
           },
-          "description": "Stores batch data for a user. Only the user can read/write their own batches.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user."
-            },
-            {
-              "name": "batchId",
-              "description": "The unique ID of the batch."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/batches/{batchId}/poultry/{poultryId}",
-        "definition": {
-          "entityName": "Poultry",
-          "schema": {
-            "$ref": "#/backend/entities/Poultry"
-          },
-          "description": "Stores poultry data for a specific batch owned by a user. Includes denormalized 'batchId' for authorization independence.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user."
-            },
-            {
-              "name": "batchId",
-              "description": "The unique ID of the batch."
-            },
-            {
-              "name": "poultryId",
-              "description": "The unique ID of the poultry."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/sensorData/{sensorDataId}",
-        "definition": {
-          "entityName": "SensorData",
-          "schema": {
-            "$ref": "#/backend/entities/SensorData"
-          },
-          "description": "Stores sensor data for a user. Only the user can read/write their own sensor data.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user."
-            },
-            {
-              "name": "sensorDataId",
-              "description": "The unique ID of the sensor data."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/feeds/{feedId}",
-        "definition": {
-          "entityName": "Feed",
-          "schema": {
-            "$ref": "#/backend/entities/Feed"
-          },
-          "description": "Stores feed data. Accessible to users with appropriate roles (e.g., admin).",
-          "params": [
-            {
-              "name": "feedId",
-              "description": "The unique ID of the feed."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/batches/{batchId}/feedConsumption/{feedConsumptionId}",
-        "definition": {
-          "entityName": "FeedConsumption",
-          "schema": {
-            "$ref": "#/backend/entities/FeedConsumption"
-          },
-          "description": "Stores feed consumption data for a specific batch owned by a user. Includes denormalized 'batchId' and 'feedId' for authorization independence.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user."
-            },
-            {
-              "name": "batchId",
-              "description": "The unique ID of the batch."
-            },
-            {
-              "name": "feedConsumptionId",
-              "description": "The unique ID of the feed consumption record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/batches/{batchId}/alerts/{alertId}",
-        "definition": {
-          "entityName": "Alert",
-          "schema": {
-            "$ref": "#/backend/entities/Alert"
-          },
-          "description": "Stores alert data for a specific batch owned by a user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user."
-            },
-            {
-              "name": "batchId",
-              "description": "The unique ID of the batch."
-            },
-            {
-              "name": "alertId",
-              "description": "The unique ID of the alert."
-            }
-          ]
+          "description": "Marks a user as an admin. The existence of this document grants admin privileges."
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to ensure Authorization Independence, support QAPs (queries are not filters), and provide clarity for security rules. Authorization independence is achieved by denormalizing relevant authorization data (ownership, membership) into subcollections, eliminating the need for `get()` calls in security rules. Structural Segregation is used to enforce homogeneous security postures within collections.  Access Modeling follows consistent patterns for user-owned data and collaborative data.\n\n*   User Data: User profiles are stored in `/users/{userId}`.  Roles can be managed via a dedicated collection `/roles/{userId}` (existence-based). This facilitates global role-based access control without custom claims.  Path-based ownership ensures only the user can access their data.\n*   Batch & Poultry Data: Batches are stored under the owning user's document at `/users/{userId}/batches/{batchId}`.  Poultry associated with a batch are stored as subcollections `/users/{userId}/batches/{batchId}/poultry/{poultryId}`. The `batchId` is denormalized onto each `Poultry` document. Ownership is implicit via the path.\n*   Sensor Data: Stored in `/users/{userId}/sensorData/{sensorDataId}`.\n*   Feed & Feed Consumption:  Feeds are stored in a top-level `/feeds/{feedId}` collection. FeedConsumption is stored under the batch at `/users/{userId}/batches/{batchId}/feedConsumption/{feedConsumptionId}`.  The `feedId` and `batchId` are denormalized onto each `FeedConsumption` document.\n*   Alerts: Alerts are stored within the batch at `/users/{userId}/batches/{batchId}/alerts/{alertId}` and include the `poultryId`.\n\nThis design supports QAPs because list operations can be secured based on path-based ownership and the existence of role documents."
+    ]
   }
 }
