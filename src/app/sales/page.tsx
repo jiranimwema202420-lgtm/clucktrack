@@ -261,7 +261,7 @@ export default function SalesPage() {
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Sale Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={selectedFlockForForm?.type === 'Broiler'}>
                     <FormControl>
                         <SelectTrigger>
                         <SelectValue placeholder="Select what was sold" />

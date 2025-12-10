@@ -623,7 +623,7 @@ export default function InventoryPage() {
             {!isLoading && flocks?.length === 0 && (
               <TableRow>
                 <TableCell colSpan={8} className="text-center">
-                  No flocks found. Add some chicks to get started.
+                  No flocks found. Add a "Day Old Chicks" expense to get started.
                 </TableCell>
               </TableRow>
             )}
