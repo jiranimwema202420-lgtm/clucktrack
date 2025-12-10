@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -255,7 +256,7 @@ export default function InventoryPage() {
             <FormItem>
                 <FormLabel>Initial Quantity</FormLabel>
                 <FormControl>
-                <Input type="number" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} />
+                <Input type="number" {...field} />
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -268,7 +269,7 @@ export default function InventoryPage() {
             <FormItem>
                 <FormLabel>Current Quantity</FormLabel>
                 <FormControl>
-                <Input type="number" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} />
+                <Input type="number" {...field} />
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -324,7 +325,7 @@ export default function InventoryPage() {
             <FormItem>
                 <FormLabel>Avg. Weight (kg)</FormLabel>
                 <FormControl>
-                <Input type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
+                <Input type="number" step="0.01" {...field} />
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -337,7 +338,7 @@ export default function InventoryPage() {
             <FormItem>
                 <FormLabel>Total Feed (kg)</FormLabel>
                 <FormControl>
-                <Input type="number" step="0.1" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} readOnly={isEdit} />
+                <Input type="number" step="0.1" {...field} readOnly={isEdit} />
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -351,7 +352,7 @@ export default function InventoryPage() {
             <FormItem>
                 <FormLabel>Total Cost ($)</FormLabel>
                 <FormControl>
-                <Input type="number" step="0.01" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} readOnly={isEdit} />
+                <Input type="number" step="0.01" {...field} readOnly={isEdit} />
                 </FormControl>
                 <FormMessage />
             </FormItem>
@@ -416,7 +417,7 @@ export default function InventoryPage() {
                                     <FormItem>
                                         <FormLabel>Number of Losses</FormLabel>
                                         <FormControl>
-                                            <Input type="number" placeholder="e.g., 5" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} />
+                                            <Input type="number" placeholder="e.g., 5" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>

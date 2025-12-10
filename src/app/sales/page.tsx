@@ -247,7 +247,7 @@ export default function SalesPage() {
                 <FormItem>
                     <FormLabel>Quantity Sold</FormLabel>
                     <FormControl>
-                    <Input type="number" placeholder="e.g., 50" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)} />
+                    <Input type="number" placeholder="e.g., 50" {...field} />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -260,7 +260,7 @@ export default function SalesPage() {
                 <FormItem>
                     <FormLabel>Price per Bird ($)</FormLabel>
                     <FormControl>
-                    <Input type="number" step="0.01" placeholder="e.g., 12.50" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
+                    <Input type="number" step="0.01" placeholder="e.g., 12.50" {...field} />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
