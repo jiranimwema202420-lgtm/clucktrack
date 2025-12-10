@@ -12,29 +12,57 @@ import {
   ShoppingCart,
   FileOutput,
   MessageSquare,
-  Settings
+  Settings,
+  LifeBuoy
 } from 'lucide-react';
 import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarContent
+  SidebarContent,
+  SidebarGroup,
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/logo';
 
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/inventory', label: 'Inventory', icon: Boxes },
-  { href: '/sales', label: 'Sales', icon: DollarSign },
-  { href: '/expenditure', label: 'Expenditure', icon: ShoppingCart },
-  { href: '/financials', label: 'Financials', icon: FileOutput },
-  { href: '/reports', label: 'Reports', icon: BarChart3 },
-  { href: '/feed-optimization', label: 'Feed AI', icon: BrainCircuit },
-  { href: '/health-prediction', label: 'Health AI', icon: HeartPulse },
-  { href: '/poultry-qa', label: 'Poultry Q&A', icon: MessageSquare },
-  { href: '/settings', label: 'Settings', icon: Settings },
-];
+const navGroups = [
+    {
+        title: 'Main',
+        items: [
+            { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        ]
+    },
+    {
+        title: 'Farm',
+        items: [
+            { href: '/inventory', label: 'Inventory', icon: Boxes },
+            { href: '/sales', label: 'Sales', icon: DollarSign },
+            { href: '/expenditure', label: 'Expenditure', icon: ShoppingCart },
+        ]
+    },
+    {
+        title: 'Analytics',
+        items: [
+            { href: '/financials', label: 'Financials', icon: FileOutput },
+            { href: '/reports', label: 'Reports', icon: BarChart3 },
+        ]
+    },
+    {
+        title: 'AI Tools',
+        items: [
+            { href: '/feed-optimization', label: 'Feed AI', icon: BrainCircuit },
+            { href: '/health-prediction', label: 'Health AI', icon: HeartPulse },
+            { href: '/poultry-qa', label: 'Poultry Q&A', icon: MessageSquare },
+        ]
+    },
+    {
+        title: 'General',
+        items: [
+            { href: '/settings', label: 'Settings', icon: Settings },
+            { href: '/help', label: 'Help', icon: LifeBuoy },
+        ]
+    }
+]
 
 export default function Nav() {
   const pathname = usePathname();
@@ -47,22 +75,29 @@ export default function Nav() {
         </Link>
       </SidebarHeader>
       <SidebarContent className="p-2">
-        <SidebarMenu>
-          {navItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === item.href}
-                tooltip={item.label}
-              >
-                <Link href={item.href}>
-                  <item.icon />
-                  <span>{item.label}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+        {navGroups.map((group) => (
+            <SidebarGroup key={group.title} className="p-2">
+                <div className="px-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 group-data-[collapsible=icon]:hidden">
+                    {group.title}
+                </div>
+                <SidebarMenu>
+                    {group.items.map((item) => (
+                        <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton
+                            asChild
+                            isActive={pathname === item.href}
+                            tooltip={item.label}
+                        >
+                            <Link href={item.href}>
+                            <item.icon />
+                            <span>{item.label}</span>
+                            </Link>
+                        </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    ))}
+                </SidebarMenu>
+            </SidebarGroup>
+        ))}
       </SidebarContent>
     </>
   );

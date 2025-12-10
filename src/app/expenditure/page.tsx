@@ -692,32 +692,6 @@ export default function ExpenditurePage() {
             </DialogContent>
        </Dialog>
         
-        <AlertDialog>
-            <AlertDialogTrigger asChild>
-                {/* This is hidden and triggered programmatically */}
-                <button id="addFlockFromExpenseTrigger" className="hidden"></button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Create New Flock?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Recording an expense for 'Day Old Chicks' should be done by adding a new flock in the Inventory. Would you like to go to the Inventory page to add a new flock now? The cost details will be carried over.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => {
-                        toast({ title: "Redirecting...", description: "Please add a new flock in the inventory page."});
-                        // In a real app, you'd use Next.js router to navigate
-                        // router.push('/inventory?from=expense&...');
-                    }}>
-                        Go to Inventory
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-
-
       <div className="lg:col-span-2">
         <Card>
           <CardHeader>
