@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -78,7 +79,7 @@ export default function SalesPage() {
     defaultValues: {
       flockId: '',
       quantity: 10,
-      pricePerUnit: 10,
+      pricePerUnit: 10.0,
       customer: '',
       saleDate: new Date(),
     },
@@ -89,11 +90,12 @@ export default function SalesPage() {
   const [calculatedTotal, setCalculatedTotal] = useState(0);
 
   useEffect(() => {
-    const quantity = typeof watchQuantity === 'number' ? watchQuantity : 0;
-    const pricePerUnit = typeof watchPricePerUnit === 'number' ? watchPricePerUnit : 0;
-    const total = quantity * pricePerUnit;
+    const quantity = form.getValues('quantity');
+    const pricePerUnit = form.getValues('pricePerUnit');
+    const total = (typeof quantity === 'number' ? quantity : 0) * (typeof pricePerUnit === 'number' ? pricePerUnit : 0);
     setCalculatedTotal(total);
-  }, [watchQuantity, watchPricePerUnit]);
+    form.setValue('total', total, { shouldValidate: true });
+  }, [watchQuantity, watchPricePerUnit, form]);
 
 
   function onSubmit(values: z.infer<typeof saleSchema>) {
@@ -139,11 +141,6 @@ export default function SalesPage() {
 
     const quantityDifference = values.quantity - originalSaleQuantity;
     
-    if (quantityDifference > flockToUpdate.count && values.flockId === selectedSale.flockId) {
-        toast({ variant: "destructive", title: "Not enough birds", description: `Cannot update sale. You only have ${flockToUpdate.count} birds remaining in the flock.` });
-        return;
-    }
-    
     // If flock is changed, revert original flock count and deduct from new one
     if(values.flockId !== selectedSale.flockId) {
         const originalFlock = flocks.find(f => f.id === selectedSale.flockId);
@@ -153,12 +150,21 @@ export default function SalesPage() {
         }
         if(values.quantity > flockToUpdate.count) {
             toast({ variant: "destructive", title: "Not enough birds", description: `The newly selected flock only has ${flockToUpdate.count} birds.` });
+            // Re-add the quantity to the original flock since the operation failed
+             if(originalFlock) {
+                const originalFlockDocRef = doc(firestore, 'users', user.uid, 'flocks', selectedSale.flockId);
+                updateDocumentNonBlocking(originalFlockDocRef, { count: originalFlock.count });
+            }
             return;
         }
         const newFlockDocRef = doc(firestore, 'users', user.uid, 'flocks', values.flockId);
         updateDocumentNonBlocking(newFlockDocRef, { count: flockToUpdate.count - values.quantity });
 
-    } else {
+    } else { // Flock is the same, just adjust quantity
+        if (quantityDifference > flockToUpdate.count) {
+            toast({ variant: "destructive", title: "Not enough birds", description: `Cannot update sale. You only have ${flockToUpdate.count} birds remaining in the flock.` });
+            return;
+        }
         const newFlockCount = flockToUpdate.count - quantityDifference;
         const flockDocRef = doc(firestore, 'users', user.uid, 'flocks', values.flockId);
         updateDocumentNonBlocking(flockDocRef, { count: newFlockCount });
@@ -202,6 +208,7 @@ export default function SalesPage() {
     form.reset({
         ...sale,
         saleDate: sale.saleDate.toDate(),
+        pricePerUnit: sale.pricePerUnit,
     });
     setEditSaleOpen(true);
   }
@@ -240,7 +247,7 @@ export default function SalesPage() {
                 <FormItem>
                     <FormLabel>Quantity Sold</FormLabel>
                     <FormControl>
-                    <Input type="number" placeholder="e.g., 50" {...field} />
+                    <Input type="number" placeholder="e.g., 50" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)} />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -253,7 +260,7 @@ export default function SalesPage() {
                 <FormItem>
                     <FormLabel>Price per Bird ($)</FormLabel>
                     <FormControl>
-                    <Input type="number" step="0.01" placeholder="e.g., 12.50" {...field} />
+                    <Input type="number" step="0.01" placeholder="e.g., 12.50" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -265,6 +272,7 @@ export default function SalesPage() {
             <FormControl>
                 <Input type="text" readOnly value={`$${calculatedTotal.toFixed(2)}`} className="font-semibold bg-muted" />
             </FormControl>
+             <FormMessage />
         </FormItem>
         <FormField
             control={form.control}
@@ -324,7 +332,7 @@ export default function SalesPage() {
           </CardHeader>
           <CardContent>
             <Button className="w-full" onClick={() => {
-                form.reset({ flockId: '', quantity: 10, pricePerUnit: 10, customer: '', saleDate: new Date() });
+                form.reset({ flockId: '', quantity: 10, pricePerUnit: 10, customer: '', saleDate: new Date(), total: 100 });
                 setAddSaleOpen(true);
             }}>
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -448,3 +456,5 @@ export default function SalesPage() {
     </div>
   );
 }
+
+    

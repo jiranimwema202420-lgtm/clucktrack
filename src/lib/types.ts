@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 import { Timestamp } from 'firebase/firestore';
 
@@ -52,12 +53,17 @@ export const saleSchema = z.object({
   pricePerUnit: z.coerce.number().positive('Price per bird must be greater than zero.'),
   customer: z.string().min(2, 'Customer name must be at least 2 characters.'),
   saleDate: z.date({ required_error: 'Please select a sale date.' }),
+  total: z.coerce.number(),
 });
 
-export interface Sale extends z.infer<typeof saleSchema> {
+export interface Sale {
   id: string, 
-  total: number,
+  flockId: string,
+  quantity: number,
+  pricePerUnit: number,
+  customer: string,
   saleDate: Timestamp,
+  total: number,
 };
 
 export const expenditureSchema = z.object({
@@ -90,3 +96,5 @@ export interface UserProfile {
   farmLocation?: string;
   farmContact?: string;
 }
+
+    
