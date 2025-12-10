@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -42,12 +42,15 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Calendar as CalendarIcon, Loader2, Trash2, Pencil } from 'lucide-react';
+import { PlusCircle, Calendar as CalendarIcon, Loader2, Trash2, Pencil, ScanLine, Camera, X } from 'lucide-react';
 import type { Expenditure, Flock } from '@/lib/types';
 import { expenditureSchema } from '@/lib/types';
 import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, Timestamp, doc } from 'firebase/firestore';
 import { z } from 'zod';
+import { scanReceipt } from '@/ai/flows/scan-receipt';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+
 
 export const dynamic = 'force-dynamic';
 
@@ -58,6 +61,11 @@ export default function ExpenditurePage() {
   const [isAddExpenseOpen, setAddExpenseOpen] = useState(false);
   const [isEditExpenseOpen, setEditExpenseOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<Expenditure | null>(null);
+  const [isScannerOpen, setScannerOpen] = useState(false);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
@@ -100,6 +108,87 @@ export default function ExpenditurePage() {
     setCalculatedAmount(amount);
     form.setValue('amount', amount, { shouldValidate: true });
   }, [watchQuantity, watchUnitPrice, form]);
+  
+  useEffect(() => {
+    if (isScannerOpen) {
+      const getCameraPermission = async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+          setHasCameraPermission(true);
+  
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+          }
+        } catch (error) {
+          console.error('Error accessing camera:', error);
+          setHasCameraPermission(false);
+          toast({
+            variant: 'destructive',
+            title: 'Camera Access Denied',
+            description: 'Please enable camera permissions in your browser settings.',
+          });
+        }
+      };
+  
+      getCameraPermission();
+  
+      return () => {
+        if (videoRef.current && videoRef.current.srcObject) {
+          const stream = videoRef.current.srcObject as MediaStream;
+          stream.getTracks().forEach(track => track.stop());
+        }
+      };
+    }
+  }, [isScannerOpen, toast]);
+
+  const handleCaptureAndScan = async () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    setIsScanning(true);
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext('2d');
+    context?.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+
+    const imageDataUri = canvas.toDataURL('image/jpeg');
+
+    try {
+      const result = await scanReceipt({ receiptImage: imageDataUri });
+      toast({
+        title: 'Scan Successful',
+        description: 'Receipt data has been extracted.',
+      });
+
+      // Find the best matching category
+      const scannedCategory = result.category.toLowerCase();
+      const matchedCategory = expenditureCategories.find(c => c.toLowerCase().includes(scannedCategory)) || result.category;
+
+      form.reset({
+        category: matchedCategory,
+        quantity: result.quantity > 0 ? result.quantity : 1,
+        unitPrice: result.unitPrice > 0 ? result.unitPrice : result.amount,
+        amount: result.amount,
+        description: result.description,
+        expenditureDate: result.expenditureDate ? new Date(result.expenditureDate) : new Date(),
+        flockId: form.getValues('flockId'),
+      });
+
+      setScannerOpen(false);
+      setAddExpenseOpen(true);
+    } catch (error) {
+      console.error('Error scanning receipt:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Scan Failed',
+        description: 'Could not extract data from the receipt. Please try again or enter manually.',
+      });
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
 
   async function updateFlockTotals(flockId: string, amountChange: number, feedChange: number) {
     if (!user || !flocks) return;
@@ -165,7 +254,9 @@ export default function ExpenditurePage() {
         updateFlockTotals(selectedExpense.flockId, -selectedExpense.amount, -oldFeedAmount);
     }
     if (values.flockId) {
-        updateFlockTotals(values.flockId, amountDifference, feedDifference);
+        const flockAmountChange = selectedExpense.flockId === values.flockId ? amountDifference : amount;
+        const flockFeedChange = selectedExpense.flockId === values.flockId ? feedDifference : newFeedAmount;
+        updateFlockTotals(values.flockId, flockAmountChange, flockFeedChange);
     }
 
 
@@ -341,13 +432,17 @@ export default function ExpenditurePage() {
             <CardTitle>Expenditure Tracking</CardTitle>
             <CardDescription>Record and view farm expenses.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="grid gap-2">
             <Button className="w-full" onClick={() => {
                 form.reset({ category: '', quantity: 1, unitPrice: 0, description: '', expenditureDate: new Date(), flockId: '' });
                 setAddExpenseOpen(true);
             }}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Record New Expense
+            </Button>
+             <Button variant="outline" className="w-full" onClick={() => setScannerOpen(true)}>
+                <ScanLine className="mr-2 h-4 w-4" />
+                Scan Receipt
             </Button>
           </CardContent>
         </Card>
@@ -369,6 +464,57 @@ export default function ExpenditurePage() {
                     </form>
                 </Form>
             </DialogContent>
+       </Dialog>
+        
+       <Dialog open={isScannerOpen} onOpenChange={setScannerOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Scan Receipt</DialogTitle>
+            <DialogDescription>
+              Position your receipt in the frame and click capture.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="relative">
+            <video
+              ref={videoRef}
+              className={cn('w-full aspect-video rounded-md bg-muted', {
+                'hidden': hasCameraPermission === false,
+              })}
+              autoPlay
+              muted
+            />
+            <canvas ref={canvasRef} className="hidden" />
+            {hasCameraPermission === false && (
+              <Alert variant="destructive" className="w-full aspect-video flex flex-col justify-center items-center">
+                <AlertTitle>Camera Access Required</AlertTitle>
+                <AlertDescription>
+                  Please allow camera access in your browser to use this feature.
+                </AlertDescription>
+              </Alert>
+            )}
+            {isScanning && (
+              <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center rounded-md">
+                <Loader2 className="h-16 w-16 animate-spin text-primary" />
+                <p className="text-white mt-4">Analyzing receipt...</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setScannerOpen(false)}
+              disabled={isScanning}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCaptureAndScan}
+              disabled={isScanning || hasCameraPermission !== true}
+            >
+              {isScanning ? 'Scanning...' : <><Camera className="mr-2 h-4 w-4" /> Capture & Scan</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
        </Dialog>
 
        <Dialog open={isEditExpenseOpen} onOpenChange={setEditExpenseOpen}>
