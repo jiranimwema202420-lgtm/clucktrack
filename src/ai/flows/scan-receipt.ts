@@ -44,12 +44,12 @@ const prompt = ai.definePrompt({
 Here are your instructions:
 1.  **Total Amount is Priority:** Find the final, total amount paid. This is the most critical piece of information.
 2.  **Date Extraction:** Look for a date on the receipt. If you find one, format it as YYYY-MM-DD. If no date is visible, use today's date.
-3.  **Item Summary:** Create a brief, clear `description` of the items purchased. For example, "50kg Broiler Feed, Vitamins" or "New water drinkers".
-4.  **Categorization:** Based on the items, determine the most likely `category`. Use one of the following common farm categories: 'Feed', 'Medicine', 'Equipment', 'Utilities', 'Maintenance', 'Labor', 'Day Old Chicks', 'Other'.
+3.  **Item Summary:** Create a brief, clear description of the items purchased. For example, "50kg Broiler Feed, Vitamins" or "New water drinkers".
+4.  **Categorization:** Based on the items, determine the most likely category. Use one of the following common farm categories: 'Feed', 'Medicine', 'Equipment', 'Utilities', 'Maintenance', 'Labor', 'Day Old Chicks', 'Other'.
 5.  **Quantity and Unit Price:**
     *   If a clear quantity and price per item are listed, extract them for the primary item.
-    *   If quantity is not clear, default `quantity` to 1.
-    *   If `unitPrice` is not clear, calculate it by dividing the total `amount` by the `quantity`. Ensure the final amount is the source of truth.
+    *   If quantity is not clear, default quantity to 1.
+    *   If unitPrice is not clear, calculate it by dividing the total amount by the quantity. Ensure the final amount is the source of truth.
 
 Analyze this image: {{media url=receiptImage}}`,
 });
