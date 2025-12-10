@@ -3,6 +3,7 @@
 
 import type { ReactNode } from 'react';
 import { usePathname, redirect } from 'next/navigation';
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { FirebaseClientProvider, useFirebase } from '@/firebase';
@@ -93,6 +94,7 @@ export default function RootLayout({
           </ThemeProvider>
         </FirebaseClientProvider>
         <Toaster />
+        <Analytics />
       </body>
     </html>
   );
