@@ -69,8 +69,11 @@ export default function LandingPage() {
     }
 
   return (
-    <div className="bg-background text-foreground">
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-sm">
+    <div className="bg-background text-foreground relative min-h-screen">
+       <div className="absolute inset-0 -z-10 h-full w-full bg-background bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] dark:bg-[radial-gradient(#ffffff20_1px,transparent_1px)]"></div>
+       <div className="absolute inset-0 -z-20 h-full w-full bg-gradient-to-br from-primary/20 via-background to-background"></div>
+
+      <header className="sticky top-0 z-50 bg-background/60 backdrop-blur-lg">
         <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
           <Logo />
           <nav className="flex items-center gap-4">
@@ -92,26 +95,28 @@ export default function LandingPage() {
       <main>
         {/* Hero Section */}
         <section className="container mx-auto flex flex-col items-center justify-center space-y-6 px-4 py-20 text-center md:px-6 lg:py-32">
-          <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
-            Modern Poultry Farm Management
-          </h1>
-          <p className="max-w-[700px] text-lg text-muted-foreground md:text-xl">
-            CluckHub provides the AI-powered tools you need to optimize your poultry operations, from flock tracking to financial analysis.
-          </p>
-          <div className="flex gap-4">
-            <Link href="/login">
-                <Button size="lg">Start for Free</Button>
-            </Link>
-            <Link href="#features">
-                <Button size="lg" variant="outline">
-                    Learn More
-                </Button>
-            </Link>
+          <div className="rounded-xl bg-card/60 p-8 backdrop-blur-xl border border-border/20">
+            <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
+              Modern Poultry Farm Management
+            </h1>
+            <p className="mx-auto mt-4 max-w-[700px] text-lg text-muted-foreground md:text-xl">
+              CluckHub provides the AI-powered tools you need to optimize your poultry operations, from flock tracking to financial analysis.
+            </p>
+            <div className="mt-8 flex justify-center gap-4">
+              <Link href="/login">
+                  <Button size="lg">Start for Free</Button>
+              </Link>
+              <Link href="#features">
+                  <Button size="lg" variant="outline">
+                      Learn More
+                  </Button>
+              </Link>
+            </div>
           </div>
         </section>
 
         {/* Features Section */}
-        <section id="features" className="w-full bg-secondary py-16 md:py-24 lg:py-32">
+        <section id="features" className="w-full bg-secondary/30 py-16 md:py-24 lg:py-32 backdrop-blur-sm">
           <div className="container mx-auto px-4 md:px-6">
             <div className="mx-auto mb-12 max-w-2xl text-center">
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
@@ -123,7 +128,7 @@ export default function LandingPage() {
             </div>
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
               {features.map((feature) => (
-                <div key={feature.title} className="flex flex-col items-center text-center">
+                <div key={feature.title} className="flex flex-col items-center text-center p-6 rounded-xl bg-background/50 border border-border/20 backdrop-blur-lg transition-all hover:shadow-2xl hover:-translate-y-1">
                   <div className="mb-4 rounded-full bg-primary/10 p-4">
                     {feature.icon}
                   </div>
@@ -148,7 +153,7 @@ export default function LandingPage() {
                 </div>
                 <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
                     {marketplaceItems.map((item) => (
-                        <Card key={item.name} className="overflow-hidden transition-shadow hover:shadow-lg">
+                        <Card key={item.name} className="overflow-hidden bg-background/50 border-border/20 backdrop-blur-lg transition-shadow hover:shadow-2xl">
                             <CardHeader className="p-0">
                                 <Image 
                                     src={item.image}
@@ -183,7 +188,7 @@ export default function LandingPage() {
 
       </main>
 
-      <footer className="border-t bg-secondary">
+      <footer className="border-t bg-secondary/50 backdrop-blur-sm">
         <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 py-8 text-center md:flex-row md:px-6">
           <Logo />
           <p className="text-sm text-muted-foreground">
