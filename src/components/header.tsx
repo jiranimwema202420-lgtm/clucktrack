@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { ChevronsUpDown, LogIn, LogOut, Settings, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import Link from 'next/link';
@@ -33,13 +32,13 @@ const pathToTitle: { [key: string]: string } = {
   '/health-prediction': 'AI Health Predictor',
   '/poultry-qa': 'Poultry Q&A',
   '/settings': 'Settings',
-  '/help': 'Help & Getting Started'
+  '/help': 'Help & Getting Started',
+  '/contacts': 'Contacts',
 };
 
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
-  const avatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
   const pageTitle = pathToTitle[pathname] || 'CluckHub';
   const { user, auth, firestore } = useFirebase();
   const { toast } = useToast();
@@ -81,7 +80,7 @@ export default function Header() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
-                  {avatar && <AvatarImage src={user.photoURL || avatar.imageUrl} alt="User Avatar" />}
+                  {user.photoURL && <AvatarImage src={user.photoURL} alt="User Avatar" />}
                   <AvatarFallback>{user.displayName?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
                 </Avatar>
                 <div className="hidden flex-col items-start md:flex">
