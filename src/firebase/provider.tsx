@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect, useRef } from 'react';
@@ -176,11 +175,21 @@ export const useAuthUser = () => {
   return { user, isUserLoading, userError };
 };
 
+type MemoizedObject = {
+  __memo?: boolean;
+}
+
 /**
  * Lightweight memo helper intended for Firestore references (Query/DocRef).
- * This wrapper does not mutate the returned object. It simply returns a stable
- * reference produced by `useMemo`. Use only with Firestore query/doc refs.
+ * This wrapper returns a stable reference produced by `useMemo` and adds
+ * a `__memo` flag to it for runtime checks in `useCollection` and `useDoc`.
  */
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
-  return useMemo(factory, deps);
+    const memoized = useMemo(factory, deps);
+
+    if (memoized && typeof memoized === 'object') {
+        (memoized as MemoizedObject).__memo = true;
+    }
+
+    return memoized;
 }
