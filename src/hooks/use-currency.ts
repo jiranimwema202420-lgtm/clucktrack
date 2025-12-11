@@ -25,6 +25,9 @@ export const useCurrency = () => {
     const currencySymbol = currencySymbols[currencyCode] || '$';
 
     const formatCurrency = (amount: number) => {
+        if (typeof amount !== 'number') {
+            return `${currencySymbol}0.00`;
+        }
         return `${currencySymbol}${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
