@@ -33,7 +33,7 @@ service cloud.firestore {
       allow delete: if isExistingOwner(userId);
 
       // Grant owner access to all subcollections and their documents
-      match /{subcollection}/{docId=**} {
+      match /{subcollection}/{docId} {
         allow read, write: if isOwner(userId);
       }
     }
