@@ -21,7 +21,7 @@ export interface UseDocResult<T> {
 }
 
 export function useDoc<T = any>(
-  memoizedDocRef: DocumentReference<DocumentData> & { __memo?: boolean } | null | undefined,
+  memoizedDocRef: DocumentReference<DocumentData> | null | undefined,
 ): UseDocResult<T> {
   type ResultDocType = WithId<T>;
   type StateDataType = ResultDocType | null;
@@ -67,10 +67,6 @@ export function useDoc<T = any>(
 
     return () => unsubscribe();
   }, [memoizedDocRef]);
-
-  if(memoizedDocRef && !memoizedDocRef.__memo) {
-    throw new Error(memoizedDocRef + ' was not properly memoized using useMemoFirebase');
-  }
 
   return { data, isLoading, error };
 }
