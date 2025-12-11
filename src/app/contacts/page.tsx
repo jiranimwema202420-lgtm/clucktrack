@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -40,7 +40,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Loader2, Trash2, Pencil } from 'lucide-react';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, useCollection } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Contact } from '@/lib/types';
 import { contactSchema } from '@/lib/types';
@@ -57,7 +57,7 @@ export default function ContactsPage() {
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
 
-  const contactsRef = useMemoFirebase(() => {
+  const contactsRef = useMemo(() => {
     if (!user) return null;
     return collection(firestore, 'users', user.uid, 'contacts');
   }, [firestore, user]);

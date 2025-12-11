@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -23,7 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
   } from '@/components/ui/select';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, useCollection } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Flock } from '@/lib/types';
 import { BarChart, Bar, XAxis, YAxis, LineChart, Line, CartesianGrid, Tooltip, TooltipProps } from 'recharts';
@@ -84,7 +84,7 @@ export default function ReportsPage() {
     const { firestore, user } = useFirebase();
     const [selectedFlockId, setSelectedFlockId] = useState('all');
 
-    const flocksRef = useMemoFirebase(() => {
+    const flocksRef = useMemo(() => {
         if (!user) return null;
         return collection(firestore, 'users', user.uid, 'flocks');
       }, [firestore, user]);

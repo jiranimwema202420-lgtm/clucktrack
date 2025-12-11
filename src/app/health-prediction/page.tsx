@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -35,7 +35,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, HeartPulse, ShieldAlert, CheckCircle, HelpCircle, Activity } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, useCollection } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import type { Flock, SensorData } from '@/lib/types';
 import { differenceInWeeks } from 'date-fns';
@@ -58,13 +58,13 @@ export default function HealthPredictionPage() {
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
 
-  const flocksRef = useMemoFirebase(() => {
+  const flocksRef = useMemo(() => {
     if (!user) return null;
     return collection(firestore, 'users', user.uid, 'flocks');
   }, [firestore, user]);
   const { data: flocks, isLoading: isLoadingFlocks } = useCollection<Flock>(flocksRef);
 
-  const sensorDataRef = useMemoFirebase(() => {
+  const sensorDataRef = useMemo(() => {
     if (!user) return null;
     return query(collection(firestore, 'users', user.uid, 'sensorData'), orderBy('timestamp', 'desc'), limit(1));
   }, [firestore, user]);

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -66,7 +66,7 @@ import { format, differenceInWeeks } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Flock } from '@/lib/types';
 import { flockSchema } from '@/lib/types';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, useCollection } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { z } from 'zod';
 import { useCurrency } from '@/hooks/use-currency';
@@ -94,7 +94,7 @@ export default function InventoryPage() {
   const { firestore, user } = useFirebase();
   const { formatCurrency } = useCurrency();
 
-  const flocksRef = useMemoFirebase(() => {
+  const flocksRef = useMemo(() => {
     if (!user) return null;
     return collection(firestore, 'users', user.uid, 'flocks');
   }, [firestore, user]);

@@ -2,6 +2,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
+import { useMemo } from 'react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import {
   DropdownMenu,
@@ -14,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ChevronsUpDown, LogIn, LogOut, Settings, ArrowLeft, ArrowRight } from 'lucide-react';
-import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
+import { useFirebase, useDoc } from '@/firebase';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { doc } from 'firebase/firestore';
@@ -43,7 +44,7 @@ export default function Header() {
   const { user, auth, firestore } = useFirebase();
   const { toast } = useToast();
 
-  const userProfileRef = useMemoFirebase(() => {
+  const userProfileRef = useMemo(() => {
     if (!user) return null;
     return doc(firestore, 'users', user.uid);
   }, [firestore, user]);

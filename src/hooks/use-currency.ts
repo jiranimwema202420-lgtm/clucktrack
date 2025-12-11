@@ -1,7 +1,8 @@
 
 'use client';
 
-import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
+import { useMemo } from "react";
+import { useFirebase, useDoc } from "@/firebase";
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from "@/lib/types";
 
@@ -15,7 +16,7 @@ const currencySymbols: { [key: string]: string } = {
 export const useCurrency = () => {
     const { user, firestore } = useFirebase();
 
-    const userProfileRef = useMemoFirebase(() => {
+    const userProfileRef = useMemo(() => {
         if (!user) return null;
         return doc(firestore, 'users', user.uid);
       }, [firestore, user]);

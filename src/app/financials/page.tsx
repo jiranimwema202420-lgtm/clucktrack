@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -12,7 +13,7 @@ import { StatsCard } from '@/components/dashboard/stats-card';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Line, ComposedChart } from 'recharts';
 import { DollarSign, TrendingUp, TrendingDown, ChevronsUpDown, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, useCollection } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Sale, Expenditure } from '@/lib/types';
 import { useCurrency } from '@/hooks/use-currency';
@@ -23,13 +24,13 @@ export default function FinancialsPage() {
   const { firestore, user } = useFirebase();
   const { formatCurrency, currencySymbol } = useCurrency();
 
-  const salesRef = useMemoFirebase(() => {
+  const salesRef = useMemo(() => {
     if (!user) return null;
     return collection(firestore, 'users', user.uid, 'sales');
   }, [firestore, user]);
   const { data: sales, isLoading: isLoadingSales } = useCollection<Sale>(salesRef);
 
-  const expendituresRef = useMemoFirebase(() => {
+  const expendituresRef = useMemo(() => {
     if (!user) return null;
     return collection(firestore, 'users', user.uid, 'expenditures');
   }, [firestore, user]);

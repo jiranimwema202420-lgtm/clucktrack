@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -16,7 +16,7 @@ import { StatsCard } from '@/components/dashboard/stats-card';
 import { Wheat, Users, BrainCircuit, ArrowRight, Loader2, Scale, Egg } from 'lucide-react';
 import Link from 'next/link';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, useCollection } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import type { Flock, SensorData } from '@/lib/types';
 import { HeartPulse } from 'lucide-react';
@@ -43,13 +43,13 @@ export default function DashboardPage() {
   const [humidity, setHumidity] = useState(60);
   const [ammoniaLevel, setAmmoniaLevel] = useState(15);
   
-  const flocksRef = useMemoFirebase(() => {
+  const flocksRef = useMemo(() => {
     if (!user) return null;
     return collection(firestore, 'users', user.uid, 'flocks');
   }, [firestore, user]);
   const { data: flocks, isLoading: isLoadingFlocks } = useCollection<Flock>(flocksRef);
 
-  const sensorDataRef = useMemoFirebase(() => {
+  const sensorDataRef = useMemo(() => {
     if (!user) return null;
     return query(collection(firestore, 'users', user.uid, 'sensorData'), orderBy('timestamp', 'desc'), limit(1));
   }, [firestore, user]);

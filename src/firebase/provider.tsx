@@ -113,12 +113,6 @@ export const useFirebase = (): FirebaseServicesAndUser => {
 };
 
 /** Convenience hooks */
-export const useAuth = () => useFirebase().auth;
 export const useFirestore = () => useFirebase().firestore;
 export const useFirebaseApp = () => useFirebase().firebaseApp;
 export const useSignOut = () => useFirebase().signOut;
-
-export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  return useMemo(factory, deps);
-}

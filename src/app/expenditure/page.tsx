@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -47,7 +47,7 @@ import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Calendar as CalendarIcon, Loader2, Trash2, Pencil, ScanLine, Camera, X, Upload } from 'lucide-react';
 import type { Expenditure, Flock } from '@/lib/types';
 import { expenditureSchema } from '@/lib/types';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, useCollection } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { z } from 'zod';
 import { scanReceipt } from '@/ai/flows/scan-receipt';
@@ -82,14 +82,14 @@ export default function ExpenditurePage() {
   const { firestore, user } = useFirebase();
   const { formatCurrency, currencySymbol } = useCurrency();
 
-  const expendituresRef = useMemoFirebase(() => {
+  const expendituresRef = useMemo(() => {
     if (!user) return null;
     return collection(firestore, 'users', user.uid, 'expenditures');
   }, [firestore, user]);
 
   const { data: expenditures, isLoading } = useCollection<Expenditure>(expendituresRef);
   
-  const flocksRef = useMemoFirebase(() => {
+  const flocksRef = useMemo(() => {
     if (!user) return null;
     return collection(firestore, 'users', user.uid, 'flocks');
   }, [firestore, user]);

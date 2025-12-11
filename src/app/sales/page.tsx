@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -47,7 +47,7 @@ import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Calendar as CalendarIcon, Loader2, Trash2, Pencil } from 'lucide-react';
 import type { Sale, Flock } from '@/lib/types';
 import { saleSchema } from '@/lib/types';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, useCollection } from '@/firebase';
 import { collection, Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
 import { useCurrency } from '@/hooks/use-currency';
@@ -66,13 +66,13 @@ export default function SalesPage() {
   const { firestore, user } = useFirebase();
   const { formatCurrency, currencySymbol } = useCurrency();
 
-  const salesRef = useMemoFirebase(() => {
+  const salesRef = useMemo(() => {
     if (!user) return null;
     return collection(firestore, 'users', user.uid, 'sales');
   }, [firestore, user]);
   const { data: sales, isLoading: isLoadingSales } = useCollection<Sale>(salesRef);
 
-  const flocksRef = useMemoFirebase(() => {
+  const flocksRef = useMemo(() => {
     if (!user) return null;
     return collection(firestore, 'users', user.uid, 'flocks');
   }, [firestore, user]);
