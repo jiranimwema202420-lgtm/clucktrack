@@ -2,9 +2,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // -----------------------------------------------------------------------
-    // HELPER FUNCTIONS
-    // -----------------------------------------------------------------------
     function isSignedIn() {
       return request.auth != null;
     }
@@ -13,54 +10,37 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isExistingDoc() {
-      return resource != null;
-    }
-
-    function isExistingOwner(userId) {
-      return isOwner(userId) && isExistingDoc();
-    }
-
     function isAdmin() {
-      return isSignedIn()
-        && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
-    // -----------------------------------------------------------------------
-    // USERS ROOT
-    // -----------------------------------------------------------------------
     match /users/{userId} {
-
-      // USER PROFILE DOC -----------------------------------------------------
-      // Allow a user to read their own document, which is required for subcollection queries.
-      // Do not allow listing all users.
       allow read: if isOwner(userId);
-      allow create: if isOwner(userId)
-                  && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId)
-                  && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
+      allow create: if isOwner(userId);
+      allow update, delete: if isOwner(userId);
 
-      // ---------------------------------------------------------------------
-      // SUBCOLLECTIONS (all user-owned)
-      // This single rule grants access to all subcollections for the owner.
-      // ---------------------------------------------------------------------
-      match /{subcollection}/{docId=**} {
+      match /flocks/{flockId} {
+        allow read, write: if isOwner(userId);
+      }
+      match /sales/{saleId} {
+        allow read, write: if isOwner(userId);
+      }
+      match /expenditures/{expenditureId} {
+        allow read, write: if isOwner(userId);
+      }
+      match /sensorData/{dataId} {
+        allow read, write: if isOwner(userId);
+      }
+      match /contacts/{contactId} {
         allow read, write: if isOwner(userId);
       }
     }
 
-    // -----------------------------------------------------------------------
-    // GLOBAL FEED CATALOG
-    // -----------------------------------------------------------------------
     match /feeds/{feedId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
-    // -----------------------------------------------------------------------
-    // ADMIN ROLES
-    // -----------------------------------------------------------------------
     match /roles_admin/{userId} {
       allow read, write: if isAdmin();
     }
