@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -----------------------------------------------------------------------
+    // HELPER FUNCTIONS
+    // -----------------------------------------------------------------------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isExistingDoc() {
+      return resource != null;
+    }
+
+    function isExistingOwner(userId) {
+      return isOwner(userId) && isExistingDoc();
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    // -----------------------------------------------------------------------
+    // USERS ROOT
+    // -----------------------------------------------------------------------
+    match /users/{userId} {
+
+      // USER PROFILE DOC -----------------------------------------------------
+      // Allow a user to read their own document. Deny listing all users.
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId)
+                  && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId)
+                  && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+
+      // SUBCOLLECTIONS -------------------------------------------------------
+      // Rules for all user-owned subcollections must be nested here.
+      
+      // FLOCKS
+      match /flocks/{flockId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // SALES
+      match /sales/{saleId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // EXPENDITURES
+      match /expenditures/{expenditureId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // SENSOR DATA
+      match /sensorData/{sensorDataId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // CONTACTS
+      match /contacts/{contactId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // GLOBAL FEED CATALOG
+    // -----------------------------------------------------------------------
+    match /feeds/{feedId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // -----------------------------------------------------------------------
+    // ADMIN ROLES
+    // -----------------------------------------------------------------------
+    match /roles_admin/{userId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
