@@ -1,38 +1,48 @@
+
 'use client';
 
-import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
-import { FirebaseApp } from 'firebase/app';
-import { Firestore } from 'firebase/firestore';
-import { Auth, User, onAuthStateChanged } from 'firebase/auth';
+import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect, useRef } from 'react';
+import type { FirebaseApp } from 'firebase/app';
+import type { Firestore } from 'firebase/firestore';
+import type { Auth, User } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
+
+/**
+ * Production-hardened FirebaseProvider
+ * - Ensures the `user` value is the actual Firebase Auth User
+ * - Provides lightweight auth helpers (signOut)
+ * - Moves FirebaseErrorListener before children so it can catch render-time errors
+ * - Makes `useMemoFirebase` non-mutating and documented for Firestore refs
+ * - Provides clear runtime errors when services are misconfigured
+ */
 
 interface FirebaseProviderProps {
   children: ReactNode;
-  firebaseApp: FirebaseApp;
-  firestore: Firestore;
-  auth: Auth;
+  firebaseApp: FirebaseApp | null;
+  firestore: Firestore | null;
+  auth: Auth | null;
 }
 
-// Internal state for user authentication
 interface UserAuthState {
   user: User | null;
   isUserLoading: boolean;
   userError: Error | null;
 }
 
-// Combined state for the Firebase context
 export interface FirebaseContextState {
-  areServicesAvailable: boolean; // True if core services (app, firestore, auth instance) are provided
+  areServicesAvailable: boolean;
   firebaseApp: FirebaseApp | null;
   firestore: Firestore | null;
-  auth: Auth | null; // The Auth service instance
-  // User authentication state
+  auth: Auth | null;
+  // Auth state
   user: User | null;
-  isUserLoading: boolean; // True during initial auth check
-  userError: Error | null; // Error from auth listener
+  isUserLoading: boolean;
+  userError: Error | null;
+  // Helpers
+  signOut: (() => Promise<void>) | null;
 }
 
-// Return type for useFirebase()
 export interface FirebaseServicesAndUser {
   firebaseApp: FirebaseApp;
   firestore: Firestore;
@@ -40,90 +50,108 @@ export interface FirebaseServicesAndUser {
   user: User | null;
   isUserLoading: boolean;
   userError: Error | null;
+  signOut: () => Promise<void>;
 }
 
-// Return type for useUser() - specific to user auth state
-export interface UserAuthHookResult {
-  user: User | null;
-  isUserLoading: boolean;
-  userError: Error | null;
-}
-
-// React Context
 export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
 
-/**
- * FirebaseProvider manages and provides Firebase services and user authentication state.
- */
-export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
-  children,
-  firebaseApp,
-  firestore,
-  auth,
-}) => {
+export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({ children, firebaseApp, firestore, auth }) => {
+  // Track auth state coming directly from the provided `auth` instance
   const [userAuthState, setUserAuthState] = useState<UserAuthState>({
     user: null,
-    isUserLoading: true, // Start loading until first auth event
+    isUserLoading: true,
     userError: null,
   });
 
-  // Effect to subscribe to Firebase auth state changes
+  // Keep a ref to the current auth instance to avoid re-subscribing if identical
+  const prevAuthRef = useRef<Auth | null>(null);
+
   useEffect(() => {
-    if (!auth) { // If no Auth service instance, cannot determine user state
-      setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
+    if (!auth) {
+      setUserAuthState({ user: null, isUserLoading: false, userError: new Error('Auth service not provided') });
+      prevAuthRef.current = null;
       return;
     }
 
-    setUserAuthState({ user: null, isUserLoading: true, userError: null }); // Reset on auth instance change
+    // Avoid re-subscribing when the same auth instance is passed
+    if (prevAuthRef.current === auth) return;
+    prevAuthRef.current = auth;
+
+    setUserAuthState({ user: null, isUserLoading: true, userError: null });
 
     const unsubscribe = onAuthStateChanged(
       auth,
-      (firebaseUser) => { // Auth state determined
+      (firebaseUser) => {
+        // Always set the canonical firebase auth user here
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
       },
-      (error) => { // Auth listener error
-        console.error("FirebaseProvider: onAuthStateChanged error:", error);
-        setUserAuthState({ user: null, isUserLoading: false, userError: error });
+      (error) => {
+        console.error('FirebaseProvider: onAuthStateChanged error:', error);
+        setUserAuthState({ user: null, isUserLoading: false, userError: error as Error });
       }
     );
-    return () => unsubscribe(); // Cleanup
-  }, [auth]); // Depends on the auth instance
 
-  // Memoize the context value
-  const contextValue = useMemo((): FirebaseContextState => {
-    const servicesAvailable = !!(firebaseApp && firestore && auth);
-    return {
-      areServicesAvailable: servicesAvailable,
-      firebaseApp: servicesAvailable ? firebaseApp : null,
-      firestore: servicesAvailable ? firestore : null,
-      auth: servicesAvailable ? auth : null,
-      user: userAuthState.user,
-      isUserLoading: userAuthState.isUserLoading,
-      userError: userAuthState.userError,
+    return () => {
+      try {
+        unsubscribe();
+      } catch (e) {
+        // Defensive: guard against unsubscribe errors
+        console.warn('Failed to unsubscribe onAuthStateChanged:', e);
+      }
     };
-  }, [firebaseApp, firestore, auth, userAuthState]);
+  }, [auth]);
+
+  // Helper: sign out if auth is present
+  const signOut = useMemo(() => {
+    if (!auth) return null;
+    return async () => {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      return auth.signOut();
+    };
+  }, [auth]);
+
+  // More robust check for services availability
+  const servicesAvailable = useMemo(() => {
+    return !!(firebaseApp && firestore && auth);
+  }, [firebaseApp, firestore, auth]);
+
+  const contextValue = useMemo<FirebaseContextState>(() => ({
+    areServicesAvailable: servicesAvailable,
+    firebaseApp: servicesAvailable ? firebaseApp : null,
+    firestore: servicesAvailable ? firestore : null,
+    auth: servicesAvailable ? auth : null,
+    user: userAuthState.user,
+    isUserLoading: userAuthState.isUserLoading,
+    userError: userAuthState.userError,
+    signOut,
+  }), [servicesAvailable, firebaseApp, firestore, auth, userAuthState, signOut]);
 
   return (
     <FirebaseContext.Provider value={contextValue}>
-      {children}
+      {/* Place the error listener first so it can catch issues during child render */}
       <FirebaseErrorListener />
+      {children}
     </FirebaseContext.Provider>
   );
 };
 
 /**
- * Hook to access core Firebase services and user authentication state.
- * Throws error if core services are not available or used outside provider.
+ * Main hook for consuming Firebase services and the canonical Firebase Auth user.
+ * Throws clear errors if used outside the provider or if services are missing.
  */
 export const useFirebase = (): FirebaseServicesAndUser => {
   const context = useContext(FirebaseContext);
-
   if (context === undefined) {
     throw new Error('useFirebase must be used within a FirebaseProvider.');
   }
 
   if (!context.areServicesAvailable || !context.firebaseApp || !context.firestore || !context.auth) {
-    throw new Error('Firebase core services not available. Check FirebaseProvider props.');
+    throw new Error('Firebase core services are not available. Ensure FirebaseProvider received valid firebaseApp, firestore and auth instances.');
+  }
+
+  if (!context.signOut) {
+    // Should not happen when services are available, but keep the contract strict
+    throw new Error('Internal invariant: signOut helper missing on Firebase context.');
   }
 
   return {
@@ -133,44 +161,26 @@ export const useFirebase = (): FirebaseServicesAndUser => {
     user: context.user,
     isUserLoading: context.isUserLoading,
     userError: context.userError,
+    signOut: context.signOut,
   };
 };
 
-/** Hook to access Firebase Auth instance. */
-export const useAuth = (): Auth => {
-  const { auth } = useFirebase();
-  return auth;
-};
+/** Convenience hooks */
+export const useAuth = () => useFirebase().auth;
+export const useFirestore = () => useFirebase().firestore;
+export const useFirebaseApp = () => useFirebase().firebaseApp;
+export const useSignOut = () => useFirebase().signOut;
 
-/** Hook to access Firestore instance. */
-export const useFirestore = (): Firestore => {
-  const { firestore } = useFirebase();
-  return firestore;
-};
-
-/** Hook to access Firebase App instance. */
-export const useFirebaseApp = (): FirebaseApp => {
-  const { firebaseApp } = useFirebase();
-  return firebaseApp;
-};
-
-type MemoFirebase <T> = T & {__memo?: boolean};
-
-export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | (MemoFirebase<T>) {
-  const memoized = useMemo(factory, deps);
-  
-  if(typeof memoized !== 'object' || memoized === null) return memoized;
-  (memoized as MemoFirebase<T>).__memo = true;
-  
-  return memoized;
-}
-
-/**
- * Hook specifically for accessing the authenticated user's state.
- * This provides the User object, loading status, and any auth errors.
- * @returns {UserAuthHookResult} Object with user, isUserLoading, userError.
- */
-export const useAuthUser = (): UserAuthHookResult => {
-  const { user, isUserLoading, userError } = useFirebase(); // Leverages the main hook
+export const useAuthUser = () => {
+  const { user, isUserLoading, userError } = useFirebase();
   return { user, isUserLoading, userError };
 };
+
+/**
+ * Lightweight memo helper intended for Firestore references (Query/DocRef).
+ * This wrapper does not mutate the returned object. It simply returns a stable
+ * reference produced by `useMemo`. Use only with Firestore query/doc refs.
+ */
+export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T {
+  return useMemo(factory, deps);
+}
