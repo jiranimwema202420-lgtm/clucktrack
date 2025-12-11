@@ -84,7 +84,7 @@ export default function LoginPage() {
         <CardHeader className="items-center text-center">
             <Logo />
             <CardTitle className="text-2xl">{isRegistering ? 'Create an Account' : 'Welcome Back'}</CardTitle>
-            <CardDescription>{isRegistering ? 'Enter your details to create a new account.' : 'Sign in to access your CluckHub dashboard.'}</CardDescription>
+            <CardDescription>{isRegistering ? 'Enter your details to create a new account.' : 'Sign in to access your CluckTrack dashboard.'}</CardDescription>
         </CardHeader>
         <CardContent>
             <div className="space-y-4">

@@ -53,7 +53,7 @@ const marketplaceItems = [
         price: '$10.00 / bag',
         image: 'https://picsum.photos/seed/103/600/400',
         hint: 'rich soil',
-        farm: 'CluckHub Farms Co-op'
+        farm: 'CluckTrack Farms Co-op'
     }
 ]
 
@@ -100,7 +100,7 @@ export default function LandingPage() {
               Modern Poultry Farm Management
             </h1>
             <p className="mx-auto mt-4 max-w-[700px] text-lg text-muted-foreground md:text-xl">
-              CluckHub provides the AI-powered tools you need to optimize your poultry operations, from flock tracking to financial analysis.
+              CluckTrack provides the AI-powered tools you need to optimize your poultry operations, from flock tracking to financial analysis.
             </p>
             <div className="mt-8 flex justify-center gap-4">
               <Link href="/login">
@@ -123,7 +123,7 @@ export default function LandingPage() {
                     Everything You Need to Succeed
                 </h2>
                 <p className="mt-4 text-muted-foreground md:text-lg">
-                    CluckHub is packed with features designed for the modern farmer.
+                    CluckTrack is packed with features designed for the modern farmer.
                 </p>
             </div>
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
@@ -148,7 +148,7 @@ export default function LandingPage() {
                         Farm-Fresh Marketplace
                     </h2>
                     <p className="mt-4 text-muted-foreground md:text-lg">
-                        Discover fresh products directly from CluckHub farms.
+                        Discover fresh products directly from CluckTrack farms.
                     </p>
                 </div>
                 <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
@@ -192,7 +192,7 @@ export default function LandingPage() {
         <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 py-8 text-center md:flex-row md:px-6">
           <Logo />
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} CluckHub. All rights reserved.
+            © {new Date().getFullYear()} CluckTrack. All rights reserved.
           </p>
           <div className="flex gap-4">
             <Link href="#" className="text-sm font-medium hover:text-primary">

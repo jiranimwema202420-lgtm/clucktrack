@@ -23,7 +23,7 @@ export function Logo({ className }: { className?: string }) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <ChickenIcon className="h-8 w-8 text-primary" />
-      <h1 className="text-2xl font-bold text-foreground">CluckHub</h1>
+      <h1 className="text-2xl font-bold text-foreground">CluckTrack</h1>
     </div>
   );
 }

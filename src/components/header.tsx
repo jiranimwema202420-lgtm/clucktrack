@@ -40,7 +40,7 @@ const pathToTitle: { [key: string]: string } = {
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
-  const pageTitle = pathToTitle[pathname] || 'CluckHub';
+  const pageTitle = pathToTitle[pathname] || 'CluckTrack';
   const { user, auth, firestore } = useFirebase();
   const { toast } = useToast();
 

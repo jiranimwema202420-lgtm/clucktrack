@@ -41,7 +41,7 @@ export default function HelpPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Welcome to CluckHub!</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Welcome to CluckTrack!</h1>
         <p className="text-lg text-muted-foreground">
           Here’s a quick guide to help you get started and make the most of the app.
         </p>
@@ -51,7 +51,7 @@ export default function HelpPage() {
         <CardHeader>
           <CardTitle>Getting Started in 4 Easy Steps</CardTitle>
           <CardDescription>
-            Follow these steps to get your farm operational in CluckHub.
+            Follow these steps to get your farm operational in CluckTrack.
           </CardDescription>
         </CardHeader>
         <CardContent>
