@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, HeartPulse, ShieldAlert, CheckCircle, HelpCircle } from 'lucide-react';
+import { Loader2, HeartPulse, ShieldAlert, CheckCircle, HelpCircle, Activity } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
@@ -255,6 +255,14 @@ export default function HealthPredictionPage() {
           )}
           {result && (
             <div className="space-y-6">
+              <Alert variant="destructive">
+                <Activity className="h-4 w-4" />
+                <AlertTitle className="font-semibold">Primary Diagnosis</AlertTitle>
+                <AlertDescription>
+                 {result.diagnosis}
+                </AlertDescription>
+              </Alert>
+
               <div>
                 <h3 className="font-semibold flex items-center mb-2"><ShieldAlert className="mr-2 h-5 w-5 text-primary" />Potential Health Issues</h3>
                 <div className="space-y-2">
