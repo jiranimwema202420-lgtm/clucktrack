@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -22,13 +23,25 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, HeartPulse, ShieldAlert, CheckCircle, HelpCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
+import type { Flock, SensorData } from '@/lib/types';
+import { differenceInWeeks } from 'date-fns';
 
 const formSchema = z.object({
+  flockId: z.string().min(1, { message: 'Please select a flock.' }),
   historicalData: z.string().min(10, {
     message: 'Please provide more detail on historical data.',
   }),
@@ -43,6 +56,21 @@ export default function HealthPredictionPage() {
   const [result, setResult] = useState<PredictHealthIssuesOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { firestore, user } = useFirebase();
+
+  const flocksRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(firestore, 'users', user.uid, 'flocks');
+  }, [firestore, user]);
+  const { data: flocks, isLoading: isLoadingFlocks } = useCollection<Flock>(flocksRef);
+
+  const sensorDataRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, 'users', user.uid, 'sensorData'), orderBy('timestamp', 'desc'), limit(1));
+  }, [firestore, user]);
+  const { data: sensorData, isLoading: isLoadingSensor } = useCollection<SensorData>(sensorDataRef);
+
+  const latestSensorData = sensorData?.[0];
 
   useEffect(() => {
     try {
@@ -58,16 +86,52 @@ export default function HealthPredictionPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      historicalData: 'Flock ID: FLK-001. Previous cycle had a mild outbreak of Coccidiosis at week 4. Mortality rate was 4%. Feed consumption dipped by 10% during that week.',
-      realTimeSensorReadings: 'Temperature: 28°C (2°C above average), Humidity: 75% (10% above average), Ammonia: 25ppm (5ppm above average). Water consumption is up 15%. Activity level is slightly reduced.',
+      flockId: '',
+      historicalData: 'Select a flock to populate historical data.',
+      realTimeSensorReadings: 'Latest sensor readings will be populated here.',
     },
   });
+
+  const watchFlockId = form.watch('flockId');
+
+  useEffect(() => {
+    const selectedFlock = flocks?.find(f => f.id === watchFlockId);
+    if (selectedFlock) {
+      const ageInWeeks = differenceInWeeks(new Date(), selectedFlock.hatchDate.toDate());
+      const mortalityRate = selectedFlock.initialCount > 0 ? ((selectedFlock.initialCount - selectedFlock.count) / selectedFlock.initialCount) * 100 : 0;
+
+      const history = `
+- Flock ID: ${selectedFlock.id.substring(0, 8)}
+- Breed: ${selectedFlock.breed}
+- Type: ${selectedFlock.type}
+- Current Age: ${ageInWeeks} weeks
+- Current Count: ${selectedFlock.count} (started with ${selectedFlock.initialCount})
+- Mortality Rate: ${mortalityRate.toFixed(2)}%
+- Notes: Previous cycle had a mild outbreak of Coccidiosis at week 4.
+      `.trim();
+      form.setValue('historicalData', history);
+    }
+
+    if (latestSensorData) {
+        const sensorReadings = `
+- Temperature: ${latestSensorData.temperature}°C
+- Humidity: ${latestSensorData.humidity}%
+- Ammonia Level: ${latestSensorData.ammoniaLevel} ppm
+- Notes: Water consumption is up 15%. Activity level is slightly reduced.
+        `.trim();
+        form.setValue('realTimeSensorReadings', sensorReadings);
+    }
+
+  }, [watchFlockId, flocks, latestSensorData, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     setResult(null);
     try {
-      const predictionResult = await predictHealthIssues(values);
+      const predictionResult = await predictHealthIssues({
+        historicalData: values.historicalData,
+        realTimeSensorReadings: values.realTimeSensorReadings
+      });
       setResult(predictionResult);
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(predictionResult));
     } catch (error) {
@@ -89,6 +153,8 @@ export default function HealthPredictionPage() {
     if (risk.includes('low')) return <Badge variant="secondary">Low</Badge>;
     return <Badge variant="outline">{risk}</Badge>;
   }
+  
+  const isDataLoading = isLoadingFlocks || isLoadingSensor;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
@@ -96,7 +162,7 @@ export default function HealthPredictionPage() {
         <CardHeader>
           <CardTitle>AI Health Predictor</CardTitle>
           <CardDescription>
-            Input flock data to forecast potential health issues.
+            Select a flock to analyze its health based on the latest data.
           </CardDescription>
         </CardHeader>
         <Form {...form}>
@@ -104,12 +170,37 @@ export default function HealthPredictionPage() {
             <CardContent className="space-y-4">
               <FormField
                 control={form.control}
+                name="flockId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Select Flock</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger disabled={isDataLoading}>
+                          <SelectValue placeholder={isDataLoading ? 'Loading flocks...' : 'Select a flock to analyze'} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {flocks?.map(flock => (
+                          <SelectItem key={flock.id} value={flock.id}>
+                            {flock.breed} ({flock.count} birds)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="historicalData"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Historical Data</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="e.g., Past illnesses, vaccination records, mortality rates..." {...field} rows={5} />
+                      <Textarea readOnly placeholder="Flock history will appear here..." {...field} rows={7} className="bg-muted text-muted-foreground text-sm" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -120,9 +211,9 @@ export default function HealthPredictionPage() {
                 name="realTimeSensorReadings"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Real-time Sensor Readings</FormLabel>
+                    <FormLabel>Real-time Data & Observations</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="e.g., Current temperature, humidity, ammonia levels..." {...field} rows={5} />
+                      <Textarea placeholder="Latest sensor readings and farm observations..." {...field} rows={5} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -130,7 +221,7 @@ export default function HealthPredictionPage() {
               />
             </CardContent>
             <CardFooter>
-              <Button type="submit" disabled={isLoading} className="w-full">
+              <Button type="submit" disabled={isLoading || isDataLoading} className="w-full">
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -191,7 +282,7 @@ export default function HealthPredictionPage() {
           {!isLoading && !result && (
             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
               <HeartPulse className="h-12 w-12" />
-              <p className="mt-4">Fill out the form to generate a health prediction report.</p>
+              <p className="mt-4">Select a flock and run the analysis to generate a health prediction report.</p>
             </div>
           )}
         </CardContent>

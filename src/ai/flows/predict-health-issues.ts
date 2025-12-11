@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -12,15 +13,15 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const PredictHealthIssuesInputSchema = z.object({
-  historicalData: z.string().describe('Historical data of the flock, including past health records, environmental conditions, and feed consumption.'),
-  realTimeSensorReadings: z.string().describe('Real-time sensor readings from the farm, such as temperature, humidity, and air quality.'),
+  historicalData: z.string().describe('A summary of the flock\'s history, including age, breed, type, mortality rate, and any relevant past incidents.'),
+  realTimeSensorReadings: z.string().describe('Real-time sensor readings (temperature, humidity, ammonia) and any manual observations about behavior or consumption changes.'),
 });
 export type PredictHealthIssuesInput = z.infer<typeof PredictHealthIssuesInputSchema>;
 
 const PredictHealthIssuesOutputSchema = z.object({
-  potentialHealthIssues: z.string().describe('A list of potential health issues predicted for the flock.'),
-  riskLevels: z.string().describe('The risk levels associated with each potential health issue (e.g., low, medium, high).'),
-  recommendations: z.string().describe('Recommendations for proactive measures to address the predicted health issues.'),
+  potentialHealthIssues: z.string().describe('A comma-separated list of the most likely potential health issues (e.g., Coccidiosis, Heat Stress, Avian Influenza).'),
+  riskLevels: z.string().describe('The risk level for each predicted issue (e.g., "Coccidiosis: High, Heat Stress: Medium").'),
+  recommendations: z.string().describe('A clear, actionable list of recommendations to mitigate the identified risks. Start with the highest-risk issue.'),
 });
 export type PredictHealthIssuesOutput = z.infer<typeof PredictHealthIssuesOutputSchema>;
 
@@ -32,17 +33,22 @@ const prompt = ai.definePrompt({
   name: 'predictHealthIssuesPrompt',
   input: {schema: PredictHealthIssuesInputSchema},
   output: {schema: PredictHealthIssuesOutputSchema},
-  prompt: `You are an AI assistant specialized in predicting potential health issues in poultry flocks.
+  prompt: `You are a veterinary AI specializing in poultry health diagnostics. Your goal is to identify potential health risks based on the provided data and suggest actionable, prioritized recommendations.
 
-  Based on the historical data and real-time sensor readings provided, identify potential health issues, assess their risk levels, and provide recommendations for proactive measures.
+  **Analyze the following data:**
 
-  Historical Data:
-  {{historicalData}}
+  **Flock History & Vitals:**
+  {{{historicalData}}}
 
-  Real-time Sensor Readings:
-  {{realTimeSensorReadings}}
+  **Current Conditions & Observations:**
+  {{{realTimeSensorReadings}}}
 
-  Respond with potential health issues, their risk levels, and recommendations.
+  **Your Task:**
+  1.  **Identify Risks:** Based on the combined data, identify the most likely health issues. Consider how the current sensor readings might correlate with the flock's history and age.
+  2.  **Assess Risk Level:** Assign a risk level (High, Medium, Low) to each potential issue. Be decisive. A combination of abnormal sensor readings and relevant history should elevate the risk.
+  3.  **Provide Recommendations:** Give clear, practical steps the farmer should take, starting with the highest priority. For example, if Coccidiosis risk is high, recommend checking litter moisture and consulting a vet. If heat stress is a risk, recommend increasing ventilation.
+
+  Provide a concise and structured response.
   `, 
 });
 
