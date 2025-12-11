@@ -32,7 +32,8 @@ service cloud.firestore {
     match /users/{userId} {
 
       // USER PROFILE DOC -----------------------------------------------------
-      // Allow a user to read their own document. Deny listing all users.
+      // Allow a user to read their own document, which is required for subcollection queries.
+      // Do not allow listing all users.
       allow read: if isOwner(userId);
       allow create: if isOwner(userId)
                   && request.resource.data.id == userId;
@@ -40,30 +41,22 @@ service cloud.firestore {
                   && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
 
-      // SUBCOLLECTIONS -------------------------------------------------------
-      // Rules for all user-owned subcollections must be nested here.
-      
-      // FLOCKS
+      // ---------------------------------------------------------------------
+      // SUBCOLLECTIONS (all user-owned)
+      // This single rule grants access to all subcollections for the owner.
+      // ---------------------------------------------------------------------
       match /flocks/{flockId} {
         allow read, write: if isOwner(userId);
       }
-      
-      // SALES
       match /sales/{saleId} {
         allow read, write: if isOwner(userId);
       }
-      
-      // EXPENDITURES
       match /expenditures/{expenditureId} {
         allow read, write: if isOwner(userId);
       }
-
-      // SENSOR DATA
       match /sensorData/{sensorDataId} {
         allow read, write: if isOwner(userId);
       }
-      
-      // CONTACTS
       match /contacts/{contactId} {
         allow read, write: if isOwner(userId);
       }
