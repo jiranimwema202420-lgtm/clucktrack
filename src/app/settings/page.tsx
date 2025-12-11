@@ -45,10 +45,6 @@ const farmDetailsSchema = z.object({
     farmContact: z.string().min(10, "Contact must be at least 10 characters.").optional().or(z.literal('')),
 });
 
-const currencySchema = z.object({
-    currency: z.string().min(2, "Please select a currency"),
-});
-
 const currencies = [
     { value: 'USD', label: 'USD - United States Dollar' },
     { value: 'EUR', label: 'EUR - Euro' },
@@ -80,14 +76,7 @@ export default function SettingsPage() {
         farmContact: userProfile?.farmContact || '',
     },
   });
-
-  const currencyForm = useForm<z.infer<typeof currencySchema>>({
-    resolver: zodResolver(currencySchema),
-    values: {
-        currency: userProfile?.currency || 'USD',
-    }
-  });
-
+  
   useEffect(() => {
     if (user) {
       profileForm.reset({ displayName: user.displayName || '' });
@@ -98,11 +87,8 @@ export default function SettingsPage() {
             farmLocation: userProfile.farmLocation || '',
             farmContact: userProfile.farmContact || '',
         });
-        currencyForm.reset({
-            currency: userProfile.currency || 'USD',
-        });
     }
-  }, [user, userProfile, profileForm, farmDetailsForm, currencyForm]);
+  }, [user, userProfile, profileForm, farmDetailsForm]);
 
 
   async function onProfileSubmit(values: z.infer<typeof profileSchema>) {
@@ -125,10 +111,10 @@ export default function SettingsPage() {
     toast({ title: 'Farm Details Updated', description: 'Your farm information has been saved.' });
   }
 
-  async function onCurrencySubmit(values: z.infer<typeof currencySchema>) {
+  async function handleCurrencyChange(currency: string) {
     if (!userProfileRef) return;
-    setDocumentNonBlocking(userProfileRef, values, { merge: true });
-    toast({ title: 'Currency Updated', description: `Your currency has been set to ${values.currency}.` });
+    setDocumentNonBlocking(userProfileRef, { currency }, { merge: true });
+    toast({ title: 'Currency Updated', description: `Your currency has been set to ${currency}.` });
   }
 
 
@@ -141,7 +127,7 @@ export default function SettingsPage() {
             Customize the look and feel of the application.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <h3 className="font-medium">Theme</h3>
@@ -158,46 +144,26 @@ export default function SettingsPage() {
                 </Button>
             </div>
           </div>
+           <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <h3 className="font-medium">Currency</h3>
+              <p className="text-sm text-muted-foreground">
+                Set the default currency for financial tracking.
+              </p>
+            </div>
+            <Select value={userProfile?.currency || 'USD'} onValueChange={handleCurrencyChange}>
+                <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Select a currency" />
+                </SelectTrigger>
+                <SelectContent>
+                {currencies.map(c => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                ))}
+                </SelectContent>
+            </Select>
+          </div>
         </CardContent>
       </Card>
-
-      <Card>
-        <CardHeader>
-            <CardTitle>Currency</CardTitle>
-            <CardDescription>Select your preferred currency for financial tracking.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <Form {...currencyForm}>
-                <form onSubmit={currencyForm.handleSubmit(onCurrencySubmit)} className="space-y-4">
-                    <FormField
-                    control={currencyForm.control}
-                    name="currency"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Default Currency</FormLabel>
-                        <div className="flex gap-2">
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a currency" />
-                                </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                {currencies.map(c => (
-                                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                                ))}
-                                </SelectContent>
-                            </Select>
-                             <Button type="submit">Save Currency</Button>
-                        </div>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                </form>
-            </Form>
-        </CardContent>
-    </Card>
       
       <Card>
         <CardHeader>
