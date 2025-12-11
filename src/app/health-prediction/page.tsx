@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, HeartPulse, ShieldAlert, CheckCircle, HelpCircle, Activity } from 'lucide-react';
+import { Loader2, HeartPulse, ShieldAlert, CheckCircle, Activity } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useFirebase, useCollection } from '@/firebase';
@@ -146,12 +146,17 @@ export default function HealthPredictionPage() {
     }
   }
 
-  const getRiskBadge = (risk: string) => {
-    risk = risk.toLowerCase();
-    if (risk.includes('high')) return <Badge variant="destructive">High</Badge>;
-    if (risk.includes('medium')) return <Badge variant="secondary" className="bg-yellow-400 text-yellow-900">Medium</Badge>;
-    if (risk.includes('low')) return <Badge variant="secondary">Low</Badge>;
-    return <Badge variant="outline">{risk}</Badge>;
+  const getRiskBadge = (risk: 'High' | 'Medium' | 'Low' | string) => {
+    switch (risk) {
+      case 'High':
+        return <Badge variant="destructive">High</Badge>;
+      case 'Medium':
+        return <Badge variant="secondary" className="bg-yellow-400 text-yellow-900">Medium</Badge>;
+      case 'Low':
+        return <Badge variant="secondary">Low</Badge>;
+      default:
+        return <Badge variant="outline">{risk}</Badge>;
+    }
   }
   
   const isDataLoading = isLoadingFlocks || isLoadingSensor;
@@ -265,16 +270,14 @@ export default function HealthPredictionPage() {
 
               <div>
                 <h3 className="font-semibold flex items-center mb-2"><ShieldAlert className="mr-2 h-5 w-5 text-primary" />Potential Health Issues</h3>
-                <div className="space-y-2">
-                    <p className="text-sm p-3 bg-secondary rounded-md">{result.potentialHealthIssues}</p>
+                <div className="space-y-2 rounded-md border p-4">
+                  {result.potentialIssues?.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <span className="text-sm font-medium">{item.issue}</span>
+                      {getRiskBadge(item.risk)}
+                    </div>
+                  ))}
                 </div>
-              </div>
-              
-              <div>
-                <h3 className="font-semibold flex items-center mb-2"><HelpCircle className="mr-2 h-5 w-5 text-primary" />Risk Levels</h3>
-                 <div className="space-y-2">
-                    <p className="text-sm p-3 bg-secondary rounded-md">{result.riskLevels}</p>
-                 </div>
               </div>
               
               <Alert>
