@@ -32,8 +32,8 @@ service cloud.firestore {
                   && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
 
-      // FIXED subcollection matcher
-      match /{subcollection}/{docId} {
+      // Grant owner access to all subcollections and their documents
+      match /{subcollection}/{docId=**} {
         allow read, write: if isOwner(userId);
       }
     }
