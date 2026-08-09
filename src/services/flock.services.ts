@@ -48,7 +48,13 @@ export class MortalityInventoryError extends Error {
     }
 }
 
-export async function recordMortality(firestore: Firestore, userId: string, flockId: string, count: number) {
+export async function recordMortality(
+    firestore: Firestore,
+    userId: string,
+    flockId: string,
+    count: number,
+    recordedAt: Date
+) {
     const flockDocRef = doc(firestore, 'users', userId, 'flocks', flockId);
     const mortalityDocRef = doc(collection(firestore, 'users', userId, 'mortalities'));
 
@@ -67,7 +73,7 @@ export async function recordMortality(firestore: Firestore, userId: string, floc
         transaction.set(mortalityDocRef, {
             flockId,
             count,
-            recordedAt: Timestamp.now(),
+            recordedAt: Timestamp.fromDate(recordedAt),
         });
     });
 }
