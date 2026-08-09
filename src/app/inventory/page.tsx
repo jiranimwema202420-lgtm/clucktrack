@@ -70,13 +70,14 @@ import { useFirebase, useCollection } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { z } from 'zod';
 import { useCurrency } from '@/hooks/use-currency';
-import { updateFlock, deleteFlock } from '@/services/flock.services';
+import { updateFlock, deleteFlock, MortalityInventoryError, recordMortality } from '@/services/flock.services';
 
 export const dynamic = 'force-dynamic';
 
 const recordLossSchema = z.object({
     flockId: z.string().min(1, "Please select a flock"),
     count: z.coerce.number().min(1, "Loss count must be at least 1"),
+    recordedAt: z.date({ required_error: "Please select the loss date" }),
 });
 
 const recordEggsSchema = z.object({
@@ -133,7 +134,7 @@ export default function InventoryPage() {
     setSelectedFlock(null);
   }
 
-  function onRecordLossSubmit(values: z.infer<typeof recordLossSchema>) {
+  async function onRecordLossSubmit(values: z.infer<typeof recordLossSchema>) {
     if (!user || !flocks) return;
     const flock = flocks?.find(f => f.id === values.flockId);
     if (!flock) {
@@ -153,12 +154,19 @@ export default function InventoryPage() {
         return;
     }
 
-    const newCount = flock.count - values.count;
-    updateFlock(firestore, user.uid, values.flockId, { count: newCount });
+    try {
+        await recordMortality(firestore, user.uid, values.flockId, values.count, values.recordedAt);
+    } catch (error) {
+        const description = error instanceof MortalityInventoryError
+            ? error.message
+            : 'The mortality record could not be saved. Please retry.';
+        toast({ variant: 'destructive', title: 'Loss not recorded', description });
+        return;
+    }
 
     toast({
         title: "Loss Recorded",
-        description: `Recorded a loss of ${values.count} in flock ${flock?.id.substring(0,6)}. New count: ${newCount}`,
+        description: `Recorded a loss of ${values.count} in flock ${flock.id.substring(0,6)}.`,
     })
     recordLossForm.reset();
     setRecordLossOpen(false);
@@ -223,6 +231,7 @@ export default function InventoryPage() {
     defaultValues: {
         flockId: '',
         count: 1,
+        recordedAt: new Date(),
     }
   });
 
@@ -495,6 +504,38 @@ export default function InventoryPage() {
                                         <FormControl>
                                             <Input type="number" placeholder="e.g., 85" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} />
                                         </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={recordLossForm.control}
+                                name="recordedAt"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-col">
+                                        <FormLabel>Loss Date</FormLabel>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <FormControl>
+                                                    <Button
+                                                        variant="outline"
+                                                        className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
+                                                    >
+                                                        {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                    </Button>
+                                                </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={field.value}
+                                                    onSelect={field.onChange}
+                                                    disabled={date => date > new Date()}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
                                         <FormMessage />
                                     </FormItem>
                                 )}

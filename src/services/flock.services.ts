@@ -1,7 +1,7 @@
-import { collection, doc, Timestamp, Firestore } from 'firebase/firestore';
+import { collection, doc, runTransaction, Timestamp, Firestore } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/firestore/non-blocking-writes';
 import { z } from 'zod';
-import { expenditureSchema, flockSchema } from '@/lib/types';
+import { expenditureSchema, flockSchema, type Flock } from '@/lib/types';
 
 export function addFlock(firestore: Firestore, userId: string, expenditure: z.infer<typeof expenditureSchema>) {
     const flocksRef = collection(firestore, 'users', userId, 'flocks');
@@ -41,10 +41,39 @@ export async function updateFlockTotals(firestore: Firestore, userId: string, fl
     // This function can be built out later if a transactional update service is created.
 }
 
-export function updateFlockInventory(firestore: Firestore, userId: string, flockId: string, quantityChange: number, saleType: 'Birds' | 'Eggs') {
+export class MortalityInventoryError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'MortalityInventoryError';
+    }
+}
+
+export async function recordMortality(
+    firestore: Firestore,
+    userId: string,
+    flockId: string,
+    count: number,
+    recordedAt: Date
+) {
     const flockDocRef = doc(firestore, 'users', userId, 'flocks', flockId);
-    // This is a simplified client-side update.
-    // In a real-world scenario, this should be a transaction in a Cloud Function
-    // to prevent race conditions.
-    // For now, we will fetch the doc, update, and write back from the component logic.
+    const mortalityDocRef = doc(collection(firestore, 'users', userId, 'mortalities'));
+
+    await runTransaction(firestore, async transaction => {
+        const flockSnapshot = await transaction.get(flockDocRef);
+        if (!flockSnapshot.exists()) {
+            throw new MortalityInventoryError('The selected flock no longer exists.');
+        }
+
+        const flock = flockSnapshot.data() as Flock;
+        if (count > flock.count) {
+            throw new MortalityInventoryError(`Cannot record a loss of ${count}; only ${flock.count} birds remain.`);
+        }
+
+        transaction.update(flockDocRef, { count: flock.count - count });
+        transaction.set(mortalityDocRef, {
+            flockId,
+            count,
+            recordedAt: Timestamp.fromDate(recordedAt),
+        });
+    });
 }

@@ -8,6 +8,7 @@ import {
   CollectionReference,
   DocumentReference,
   SetOptions,
+  WriteBatch,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
@@ -76,6 +77,13 @@ export function deleteDocumentNonBlocking(docRef: DocumentReference) {
         path: docRef.path,
         operation: 'delete',
       }, serverError);
+      errorEmitter.emit('permission-error', permissionError);
+    });
+}
+
+export function commitBatchNonBlocking(batch: WriteBatch, context: SecurityRuleContext) {
+    return batch.commit().catch(serverError => {
+      const permissionError = new FirestorePermissionError(context, serverError);
       errorEmitter.emit('permission-error', permissionError);
     });
 }
