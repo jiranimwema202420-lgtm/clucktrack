@@ -74,7 +74,7 @@ function AppLayout({ children }: { children: ReactNode }) {
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.React.ReactNode;
+  children: ReactNode;
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
