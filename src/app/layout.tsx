@@ -2,12 +2,16 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { usePathname, redirect } from 'next/navigation';
+import { redirect, usePathname } from 'next/navigation';
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster"
+import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider, useFirebase } from '@/firebase';
 import { ThemeProvider } from '@/components/theme-provider';
-import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
+import {
+  Sidebar,
+  SidebarInset,
+  SidebarProvider,
+} from '@/components/ui/sidebar';
 import Header from '@/components/header';
 import Nav from '@/components/nav';
 import { Loader2 } from 'lucide-react';
@@ -20,6 +24,10 @@ function AppLayout({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useFirebase();
   const isLandingPage = pathname === '/';
 
+  /*
+   * Show a loading screen while Firebase determines
+   * whether the current user is authenticated.
+   */
   if (isUserLoading && !isLandingPage) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
@@ -30,27 +38,36 @@ function AppLayout({ children }: { children: ReactNode }) {
 
   const isPublicRoute = publicRoutes.includes(pathname);
 
-  // If loading is finished and user is logged in, redirect from landing or public routes
+  /*
+   * Authenticated users should not remain on the
+   * landing page or login page.
+   */
   if (!isUserLoading && user && (isLandingPage || isPublicRoute)) {
     redirect('/dashboard');
   }
   
-  // If loading is finished and user is not logged in, redirect from protected routes
+  /*
+   * Unauthenticated users cannot access protected routes.
+   */
   if (!isUserLoading && !user && !isPublicRoute && !isLandingPage) {
     redirect('/login');
   }
   
-  // For landing and login pages, render them without the main app layout
-  // also show landing page if user is loading
+  /*
+   * Landing page and public routes don't use
+   * the authenticated application shell.
+   */
   if (isLandingPage || isPublicRoute) {
     return <div className="bg-background">{children}</div>;
   }
 
-  // Render the full app layout for authenticated users on protected routes
+  /*
+   * Authenticated application layout.
+   */
   if (user) {
     return (
       <SidebarProvider>
-        <Sidebar className='bg-card/60 backdrop-blur-lg border-r border-border/20'>
+        <Sidebar className="border-r border-border/20 bg-card/60 backdrop-blur-lg">
           <Nav />
         </Sidebar>
         <SidebarInset>
@@ -63,7 +80,9 @@ function AppLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // Fallback for edge cases (should not be reached with current logic)
+  /*
+   * Fallback for unexpected authentication states.
+   */
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-background">
       <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -85,8 +104,10 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
-      <body className={cn("font-sans antialiased relative min-h-screen")}>
+      <body className={cn('relative min-h-screen font-sans antialiased')}>
+        {/* Background dot pattern */}
         <div className="absolute inset-0 -z-10 h-full w-full bg-background bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] dark:bg-[radial-gradient(#ffffff20_1px,transparent_1px)]"></div>
+        {/* Background gradient */}
         <div className="absolute inset-0 -z-20 h-full w-full bg-gradient-to-br from-primary/10 via-background to-background"></div>
         <FirebaseClientProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
