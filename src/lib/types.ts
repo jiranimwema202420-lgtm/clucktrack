@@ -83,7 +83,7 @@ export const expenditureSchema = z.object({
   flockId: z.string().optional(),
 });
 
-export interface Expenditure extends z.infer<typeof expenditureSchema> { 
+export interface Expenditure extends Omit<z.infer<typeof expenditureSchema>, 'expenditureDate'> {
   id: string,
   expenditureDate: Timestamp,
 };

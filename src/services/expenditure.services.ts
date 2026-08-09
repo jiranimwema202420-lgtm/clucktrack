@@ -1,4 +1,4 @@
-import { collection, doc, Timestamp, Firestore, WhereFilter, where } from 'firebase/firestore';
+import { collection, doc, Timestamp, Firestore } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/firestore/non-blocking-writes';
 import type { Expenditure, Flock } from '@/lib/types';
 import { z } from 'zod';
