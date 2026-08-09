@@ -70,7 +70,7 @@ import { useFirebase, useCollection } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { z } from 'zod';
 import { useCurrency } from '@/hooks/use-currency';
-import { updateFlock, deleteFlock, recordMortality } from '@/services/flock.services';
+import { updateFlock, deleteFlock, MortalityInventoryError, recordMortality } from '@/services/flock.services';
 
 export const dynamic = 'force-dynamic';
 
@@ -133,7 +133,7 @@ export default function InventoryPage() {
     setSelectedFlock(null);
   }
 
-  function onRecordLossSubmit(values: z.infer<typeof recordLossSchema>) {
+  async function onRecordLossSubmit(values: z.infer<typeof recordLossSchema>) {
     if (!user || !flocks) return;
     const flock = flocks?.find(f => f.id === values.flockId);
     if (!flock) {
@@ -153,12 +153,19 @@ export default function InventoryPage() {
         return;
     }
 
-    const newCount = flock.count - values.count;
-    recordMortality(firestore, user.uid, values.flockId, values.count);
+    try {
+        await recordMortality(firestore, user.uid, values.flockId, values.count);
+    } catch (error) {
+        const description = error instanceof MortalityInventoryError
+            ? error.message
+            : 'The mortality record could not be saved. Please retry.';
+        toast({ variant: 'destructive', title: 'Loss not recorded', description });
+        return;
+    }
 
     toast({
         title: "Loss Recorded",
-        description: `Recorded a loss of ${values.count} in flock ${flock?.id.substring(0,6)}. New count: ${newCount}`,
+        description: `Recorded a loss of ${values.count} in flock ${flock.id.substring(0,6)}.`,
     })
     recordLossForm.reset();
     setRecordLossOpen(false);

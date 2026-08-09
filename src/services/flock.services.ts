@@ -1,7 +1,7 @@
-import { collection, doc, increment, Timestamp, Firestore, writeBatch } from 'firebase/firestore';
-import { addDocumentNonBlocking, commitBatchNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/firestore/non-blocking-writes';
+import { collection, doc, runTransaction, Timestamp, Firestore } from 'firebase/firestore';
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/firestore/non-blocking-writes';
 import { z } from 'zod';
-import { expenditureSchema, flockSchema } from '@/lib/types';
+import { expenditureSchema, flockSchema, type Flock } from '@/lib/types';
 
 export function addFlock(firestore: Firestore, userId: string, expenditure: z.infer<typeof expenditureSchema>) {
     const flocksRef = collection(firestore, 'users', userId, 'flocks');
@@ -41,30 +41,33 @@ export async function updateFlockTotals(firestore: Firestore, userId: string, fl
     // This function can be built out later if a transactional update service is created.
 }
 
-export function updateFlockInventory(firestore: Firestore, userId: string, flockId: string, quantityChange: number, saleType: 'Birds' | 'Eggs') {
-    const flockDocRef = doc(firestore, 'users', userId, 'flocks', flockId);
-    const inventoryField = saleType === 'Birds' ? 'count' : 'totalEggsCollected';
-
-    updateDocumentNonBlocking(flockDocRef, {
-        [inventoryField]: increment(quantityChange),
-    });
+export class MortalityInventoryError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'MortalityInventoryError';
+    }
 }
 
-export function recordMortality(firestore: Firestore, userId: string, flockId: string, count: number) {
+export async function recordMortality(firestore: Firestore, userId: string, flockId: string, count: number) {
     const flockDocRef = doc(firestore, 'users', userId, 'flocks', flockId);
     const mortalityDocRef = doc(collection(firestore, 'users', userId, 'mortalities'));
-    const batch = writeBatch(firestore);
 
-    batch.update(flockDocRef, { count: increment(-count) });
-    batch.set(mortalityDocRef, {
-        flockId,
-        count,
-        recordedAt: Timestamp.now(),
-    });
+    await runTransaction(firestore, async transaction => {
+        const flockSnapshot = await transaction.get(flockDocRef);
+        if (!flockSnapshot.exists()) {
+            throw new MortalityInventoryError('The selected flock no longer exists.');
+        }
 
-    return commitBatchNonBlocking(batch, {
-        path: flockDocRef.path,
-        operation: 'update',
-        requestResourceData: { countChange: -count },
+        const flock = flockSnapshot.data() as Flock;
+        if (count > flock.count) {
+            throw new MortalityInventoryError(`Cannot record a loss of ${count}; only ${flock.count} birds remain.`);
+        }
+
+        transaction.update(flockDocRef, { count: flock.count - count });
+        transaction.set(mortalityDocRef, {
+            flockId,
+            count,
+            recordedAt: Timestamp.now(),
+        });
     });
 }
