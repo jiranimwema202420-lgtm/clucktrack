@@ -48,10 +48,15 @@ import { PlusCircle, Calendar as CalendarIcon, Loader2, Trash2, Pencil } from 'l
 import type { Sale, Flock } from '@/lib/types';
 import { saleSchema } from '@/lib/types';
 import { useFirebase, useCollection } from '@/firebase';
-import { collection, Timestamp } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import { z } from 'zod';
 import { useCurrency } from '@/hooks/use-currency';
-import { addSaleWithInventory, updateSaleWithInventory, deleteSaleWithInventory } from '@/services/sale.services';
+import {
+  addSaleWithInventory,
+  deleteSaleWithInventory,
+  SaleInventoryError,
+  updateSaleWithInventory,
+} from '@/services/sale.services';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,7 +64,6 @@ export default function SalesPage() {
   const [isAddSaleOpen, setAddSaleOpen] = useState(false);
   const [isEditSaleOpen, setEditSaleOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
-  const [originalSaleData, setOriginalSaleData] = useState<{ quantity: number, flockId: string, saleType: string } | null>(null);
 
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
@@ -112,7 +116,7 @@ export default function SalesPage() {
   }, [watchQuantity, watchPricePerUnit, form]);
 
 
-  function onSubmit(values: z.infer<typeof saleSchema>) {
+  async function onSubmit(values: z.infer<typeof saleSchema>) {
     if (!user || !flocks) return;
     
     const flockToUpdate = flocks.find(f => f.id === values.flockId);
@@ -130,50 +134,51 @@ export default function SalesPage() {
         return;
     }
 
-    addSaleWithInventory(firestore, user.uid, values);
+    try {
+      await addSaleWithInventory(firestore, user.uid, values);
+    } catch (error) {
+      const description = error instanceof SaleInventoryError
+        ? error.message
+        : 'The sale could not be saved. Please retry.';
+      toast({ variant: 'destructive', title: 'Sale not recorded', description });
+      return;
+    }
 
     toast({ title: 'Sale Recorded', description: `Recorded sale to ${values.customer} for ${formatCurrency(values.total)}.` });
     form.reset();
     setAddSaleOpen(false);
   }
 
-  function onEditSubmit(values: z.infer<typeof saleSchema>) {
-    if (!user || !flocks || !selectedSale || !originalSaleData) return;
-    
-    const flockToUpdate = flocks.find(f => f.id === values.flockId);
-    if (!flockToUpdate) {
-        toast({ variant: "destructive", title: "Error", description: "Could not find the selected flock." });
-        return;
-    }
+  async function onEditSubmit(values: z.infer<typeof saleSchema>) {
+    if (!user || !selectedSale) return;
 
-    const isReplacingSameInventory = values.flockId === originalSaleData.flockId && values.saleType === originalSaleData.saleType;
-    const availableBirds = flockToUpdate.count + (isReplacingSameInventory && values.saleType === 'Birds' ? originalSaleData.quantity : 0);
-    const availableEggs = (flockToUpdate.totalEggsCollected || 0) + (isReplacingSameInventory && values.saleType === 'Eggs' ? originalSaleData.quantity : 0);
-
-    if (values.saleType === 'Birds' && values.quantity > availableBirds) {
-        toast({ variant: "destructive", title: "Not enough birds", description: `The selected flock only has ${flockToUpdate.count} birds.` });
-        return;
+    try {
+      await updateSaleWithInventory(firestore, user.uid, selectedSale.id, values);
+    } catch (error) {
+      const description = error instanceof SaleInventoryError
+        ? error.message
+        : 'The sale could not be updated. Please retry.';
+      toast({ variant: 'destructive', title: 'Sale not updated', description });
+      return;
     }
-     if (values.saleType === 'Eggs' && values.quantity > availableEggs) {
-        toast({ variant: "destructive", title: "Not enough eggs", description: `You only have ${flockToUpdate.totalEggsCollected || 0} eggs recorded.`});
-        return;
-    }
-
-    updateSaleWithInventory(firestore, user.uid, selectedSale.id, values, {
-      flockId: originalSaleData.flockId,
-      saleType: originalSaleData.saleType as Sale['saleType'],
-      quantity: originalSaleData.quantity,
-    });
 
     toast({ title: "Sale Updated", description: "The sale record has been updated." });
     setEditSaleOpen(false);
     setSelectedSale(null);
   }
 
-  function handleDeleteSale(sale: Sale) {
+  async function handleDeleteSale(sale: Sale) {
     if (!user || !flocks) return;
     
-    deleteSaleWithInventory(firestore, user.uid, sale);
+    try {
+      await deleteSaleWithInventory(firestore, user.uid, sale.id);
+    } catch (error) {
+      const description = error instanceof SaleInventoryError
+        ? error.message
+        : 'The sale could not be deleted. Please retry.';
+      toast({ variant: 'destructive', title: 'Sale not deleted', description });
+      return;
+    }
     toast({
       title: "Sale Deleted",
       description: `The sale has been deleted and items have been returned to inventory.`,
@@ -183,7 +188,6 @@ export default function SalesPage() {
 
   const handleEditClick = (sale: Sale) => {
     setSelectedSale(sale);
-    setOriginalSaleData({ quantity: sale.quantity, flockId: sale.flockId, saleType: sale.saleType });
     form.reset({
         ...sale,
         saleDate: sale.saleDate.toDate(),

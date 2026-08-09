@@ -1,25 +1,31 @@
-import { collection, doc, increment, Timestamp, Firestore, writeBatch } from 'firebase/firestore';
-import { addDocumentNonBlocking, commitBatchNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/firestore/non-blocking-writes';
-import type { Sale } from '@/lib/types';
+import {
+    collection,
+    doc,
+    Firestore,
+    runTransaction,
+    Timestamp,
+    Transaction,
+} from 'firebase/firestore';
+import type { Flock, Sale } from '@/lib/types';
 import { z } from 'zod';
 import { saleSchema } from '@/lib/types';
 
-export function addSale(firestore: Firestore, userId: string, data: z.infer<typeof saleSchema>) {
-    const salesRef = collection(firestore, 'users', userId, 'sales');
-    const total = data.quantity * data.pricePerUnit;
-    const newSale = {
-      ...data,
-      saleDate: Timestamp.fromDate(data.saleDate),
-      total,
-    };
-    addDocumentNonBlocking(salesRef, newSale);
+type SaleInput = z.infer<typeof saleSchema>;
+type InventoryField = 'count' | 'totalEggsCollected';
+type InventoryChanges = Map<string, Partial<Record<InventoryField, number>>>;
+
+export class SaleInventoryError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'SaleInventoryError';
+    }
 }
 
-function inventoryField(saleType: Sale['saleType']) {
+function inventoryField(saleType: Sale['saleType']): InventoryField {
     return saleType === 'Birds' ? 'count' : 'totalEggsCollected';
 }
 
-function saleData(data: z.infer<typeof saleSchema>) {
+function saleData(data: SaleInput) {
     return {
         ...data,
         saleDate: Timestamp.fromDate(data.saleDate),
@@ -27,88 +33,109 @@ function saleData(data: z.infer<typeof saleSchema>) {
     };
 }
 
-export function addSaleWithInventory(firestore: Firestore, userId: string, data: z.infer<typeof saleSchema>) {
-    const salesRef = collection(firestore, 'users', userId, 'sales');
-    const saleDocRef = doc(salesRef);
-    const flockDocRef = doc(firestore, 'users', userId, 'flocks', data.flockId);
-    const batch = writeBatch(firestore);
+function addInventoryChange(
+    changes: InventoryChanges,
+    flockId: string,
+    saleType: Sale['saleType'],
+    quantityChange: number
+) {
+    const field = inventoryField(saleType);
+    const flockChanges = changes.get(flockId) ?? {};
+    flockChanges[field] = (flockChanges[field] ?? 0) + quantityChange;
+    changes.set(flockId, flockChanges);
+}
 
-    batch.set(saleDocRef, saleData(data));
-    batch.update(flockDocRef, { [inventoryField(data.saleType)]: increment(-data.quantity) });
+async function applyInventoryChanges(
+    transaction: Transaction,
+    firestore: Firestore,
+    userId: string,
+    changes: InventoryChanges
+) {
+    const updates = [...changes.entries()]
+        .map(([flockId, fieldChanges]) => [
+            flockId,
+            Object.entries(fieldChanges).filter(([, quantityChange]) => quantityChange !== 0),
+        ] as const)
+        .filter(([, fieldChanges]) => fieldChanges.length > 0);
 
-    return commitBatchNonBlocking(batch, {
-        path: saleDocRef.path,
-        operation: 'create',
-        requestResourceData: data,
+    const snapshots = await Promise.all(
+        updates.map(([flockId]) => transaction.get(doc(firestore, 'users', userId, 'flocks', flockId)))
+    );
+
+    updates.forEach(([flockId, fieldChanges], index) => {
+        const flockSnapshot = snapshots[index];
+        if (!flockSnapshot.exists()) {
+            throw new SaleInventoryError('The selected flock no longer exists.');
+        }
+
+        const flock = flockSnapshot.data() as Flock;
+        const flockUpdates: Partial<Record<InventoryField, number>> = {};
+
+        fieldChanges.forEach(([field, quantityChange]) => {
+            const currentQuantity = flock[field] ?? 0;
+            const nextQuantity = currentQuantity + quantityChange;
+
+            if (nextQuantity < 0) {
+                const itemLabel = field === 'count' ? 'birds' : 'eggs';
+                throw new SaleInventoryError(`Not enough ${itemLabel} remain in the selected flock.`);
+            }
+
+            flockUpdates[field] = nextQuantity;
+        });
+
+        transaction.update(doc(firestore, 'users', userId, 'flocks', flockId), flockUpdates);
     });
 }
 
-export function updateSale(firestore: Firestore, userId: string, saleId: string, data: z.infer<typeof saleSchema>) {
-    const saleDocRef = doc(firestore, 'users', userId, 'sales', saleId);
-    const total = data.quantity * data.pricePerUnit;
-    const updatedSale = {
-        ...data,
-        saleDate: Timestamp.fromDate(data.saleDate),
-        total,
-    };
-    updateDocumentNonBlocking(saleDocRef, updatedSale);
+export async function addSaleWithInventory(firestore: Firestore, userId: string, data: SaleInput) {
+    const saleDocRef = doc(collection(firestore, 'users', userId, 'sales'));
+    const inventoryChanges: InventoryChanges = new Map();
+    addInventoryChange(inventoryChanges, data.flockId, data.saleType, -data.quantity);
+
+    await runTransaction(firestore, async transaction => {
+        await applyInventoryChanges(transaction, firestore, userId, inventoryChanges);
+        transaction.set(saleDocRef, saleData(data));
+    });
 }
 
-export function updateSaleWithInventory(
+export async function updateSaleWithInventory(
     firestore: Firestore,
     userId: string,
     saleId: string,
-    data: z.infer<typeof saleSchema>,
-    originalSale: Pick<Sale, 'flockId' | 'saleType' | 'quantity'>
+    data: SaleInput
 ) {
     const saleDocRef = doc(firestore, 'users', userId, 'sales', saleId);
-    const inventoryChanges = new Map<string, Record<string, number>>();
-    const addInventoryChange = (flockId: string, saleType: Sale['saleType'], quantityChange: number) => {
-        const changes = inventoryChanges.get(flockId) ?? {};
-        const field = inventoryField(saleType);
-        changes[field] = (changes[field] ?? 0) + quantityChange;
-        inventoryChanges.set(flockId, changes);
-    };
 
-    addInventoryChange(originalSale.flockId, originalSale.saleType, originalSale.quantity);
-    addInventoryChange(data.flockId, data.saleType, -data.quantity);
-
-    const batch = writeBatch(firestore);
-    batch.update(saleDocRef, saleData(data));
-    inventoryChanges.forEach((changes, flockId) => {
-        const updates = Object.fromEntries(
-            Object.entries(changes)
-                .filter(([, quantityChange]) => quantityChange !== 0)
-                .map(([field, quantityChange]) => [field, increment(quantityChange)])
-        );
-
-        if (Object.keys(updates).length > 0) {
-            batch.update(doc(firestore, 'users', userId, 'flocks', flockId), updates);
+    await runTransaction(firestore, async transaction => {
+        const saleSnapshot = await transaction.get(saleDocRef);
+        if (!saleSnapshot.exists()) {
+            throw new SaleInventoryError('This sale no longer exists.');
         }
-    });
 
-    return commitBatchNonBlocking(batch, {
-        path: saleDocRef.path,
-        operation: 'update',
-        requestResourceData: data,
+        const existingSale = saleSnapshot.data() as Sale;
+        const inventoryChanges: InventoryChanges = new Map();
+        addInventoryChange(inventoryChanges, existingSale.flockId, existingSale.saleType, existingSale.quantity);
+        addInventoryChange(inventoryChanges, data.flockId, data.saleType, -data.quantity);
+
+        await applyInventoryChanges(transaction, firestore, userId, inventoryChanges);
+        transaction.update(saleDocRef, saleData(data));
     });
 }
 
-export function deleteSale(firestore: Firestore, userId: string, saleId: string) {
+export async function deleteSaleWithInventory(firestore: Firestore, userId: string, saleId: string) {
     const saleDocRef = doc(firestore, 'users', userId, 'sales', saleId);
-    deleteDocumentNonBlocking(saleDocRef);
-}
 
-export function deleteSaleWithInventory(firestore: Firestore, userId: string, sale: Sale) {
-    const saleDocRef = doc(firestore, 'users', userId, 'sales', sale.id);
-    const flockDocRef = doc(firestore, 'users', userId, 'flocks', sale.flockId);
-    const batch = writeBatch(firestore);
+    await runTransaction(firestore, async transaction => {
+        const saleSnapshot = await transaction.get(saleDocRef);
+        if (!saleSnapshot.exists()) {
+            throw new SaleInventoryError('This sale no longer exists.');
+        }
 
-    batch.delete(saleDocRef);
-    batch.update(flockDocRef, { [inventoryField(sale.saleType)]: increment(sale.quantity) });
+        const sale = saleSnapshot.data() as Sale;
+        const inventoryChanges: InventoryChanges = new Map();
+        addInventoryChange(inventoryChanges, sale.flockId, sale.saleType, sale.quantity);
 
-    return commitBatchNonBlocking(batch, {
-        path: saleDocRef.path,
-        operation: 'delete',
+        await applyInventoryChanges(transaction, firestore, userId, inventoryChanges);
+        transaction.delete(saleDocRef);
     });
 }
