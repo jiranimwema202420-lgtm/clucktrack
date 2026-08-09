@@ -1,5 +1,5 @@
-import { collection, doc, increment, Timestamp, Firestore } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/firestore/non-blocking-writes';
+import { collection, doc, increment, Timestamp, Firestore, writeBatch } from 'firebase/firestore';
+import { addDocumentNonBlocking, commitBatchNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/firestore/non-blocking-writes';
 import { z } from 'zod';
 import { expenditureSchema, flockSchema } from '@/lib/types';
 
@@ -47,5 +47,24 @@ export function updateFlockInventory(firestore: Firestore, userId: string, flock
 
     updateDocumentNonBlocking(flockDocRef, {
         [inventoryField]: increment(quantityChange),
+    });
+}
+
+export function recordMortality(firestore: Firestore, userId: string, flockId: string, count: number) {
+    const flockDocRef = doc(firestore, 'users', userId, 'flocks', flockId);
+    const mortalityDocRef = doc(collection(firestore, 'users', userId, 'mortalities'));
+    const batch = writeBatch(firestore);
+
+    batch.update(flockDocRef, { count: increment(-count) });
+    batch.set(mortalityDocRef, {
+        flockId,
+        count,
+        recordedAt: Timestamp.now(),
+    });
+
+    return commitBatchNonBlocking(batch, {
+        path: flockDocRef.path,
+        operation: 'update',
+        requestResourceData: { countChange: -count },
     });
 }

@@ -70,7 +70,7 @@ import { useFirebase, useCollection } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { z } from 'zod';
 import { useCurrency } from '@/hooks/use-currency';
-import { updateFlock, deleteFlock, updateFlockInventory } from '@/services/flock.services';
+import { updateFlock, deleteFlock, recordMortality } from '@/services/flock.services';
 
 export const dynamic = 'force-dynamic';
 
@@ -154,7 +154,7 @@ export default function InventoryPage() {
     }
 
     const newCount = flock.count - values.count;
-    updateFlockInventory(firestore, user.uid, values.flockId, -values.count, 'Birds');
+    recordMortality(firestore, user.uid, values.flockId, values.count);
 
     toast({
         title: "Loss Recorded",
