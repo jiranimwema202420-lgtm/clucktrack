@@ -2,7 +2,7 @@
 
 ## Commands
 
-- `npm run dev` starts the Next.js development server on port 9002.
+- `npm run dev` starts the Next.js development server on its default port (3000). Use `npm run dev -- -p 9002` to run it on port 9002.
 - `npm run build` creates a production build in a POSIX shell; on Windows, use `npx next build` because the script's `NODE_ENV=production` prefix is not cross-platform. `npm run start` serves the build.
 - `npm run typecheck` runs TypeScript without emitting files.
 - `npm run genkit:watch` starts the Genkit developer UI (normally port 4000); use `npm run genkit:dev` for a non-watching process.
