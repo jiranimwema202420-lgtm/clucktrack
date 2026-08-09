@@ -51,8 +51,7 @@ import { useFirebase, useCollection } from '@/firebase';
 import { collection, Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
 import { useCurrency } from '@/hooks/use-currency';
-import { addSale, updateSale, deleteSale } from '@/services/sale.services';
-import { updateFlockInventory } from '@/services/flock.services';
+import { addSaleWithInventory, updateSaleWithInventory, deleteSaleWithInventory } from '@/services/sale.services';
 
 export const dynamic = 'force-dynamic';
 
@@ -131,9 +130,7 @@ export default function SalesPage() {
         return;
     }
 
-    updateFlockInventory(firestore, user.uid, values.flockId, -values.quantity, values.saleType);
-
-    addSale(firestore, user.uid, values);
+    addSaleWithInventory(firestore, user.uid, values);
 
     toast({ title: 'Sale Recorded', description: `Recorded sale to ${values.customer} for ${formatCurrency(values.total)}.` });
     form.reset();
@@ -149,26 +146,24 @@ export default function SalesPage() {
         return;
     }
 
-    // Revert original inventory change
-    updateFlockInventory(firestore, user.uid, originalSaleData.flockId, originalSaleData.quantity, originalSaleData.saleType as 'Birds' | 'Eggs');
+    const isReplacingSameInventory = values.flockId === originalSaleData.flockId && values.saleType === originalSaleData.saleType;
+    const availableBirds = flockToUpdate.count + (isReplacingSameInventory && values.saleType === 'Birds' ? originalSaleData.quantity : 0);
+    const availableEggs = (flockToUpdate.totalEggsCollected || 0) + (isReplacingSameInventory && values.saleType === 'Eggs' ? originalSaleData.quantity : 0);
 
-    // Check if there's enough new inventory
-    if (values.saleType === 'Birds' && values.quantity > flockToUpdate.count) {
+    if (values.saleType === 'Birds' && values.quantity > availableBirds) {
         toast({ variant: "destructive", title: "Not enough birds", description: `The selected flock only has ${flockToUpdate.count} birds.` });
-        // Rollback the inventory reversion
-        updateFlockInventory(firestore, user.uid, originalSaleData.flockId, -originalSaleData.quantity, originalSaleData.saleType as 'Birds' | 'Eggs');
         return;
     }
-     if (values.saleType === 'Eggs' && values.quantity > (flockToUpdate.totalEggsCollected || 0)) {
+     if (values.saleType === 'Eggs' && values.quantity > availableEggs) {
         toast({ variant: "destructive", title: "Not enough eggs", description: `You only have ${flockToUpdate.totalEggsCollected || 0} eggs recorded.`});
-        updateFlockInventory(firestore, user.uid, originalSaleData.flockId, -originalSaleData.quantity, originalSaleData.saleType as 'Birds' | 'Eggs');
         return;
     }
 
-    // Apply new inventory change
-    updateFlockInventory(firestore, user.uid, values.flockId, -values.quantity, values.saleType);
-
-    updateSale(firestore, user.uid, selectedSale.id, values);
+    updateSaleWithInventory(firestore, user.uid, selectedSale.id, values, {
+      flockId: originalSaleData.flockId,
+      saleType: originalSaleData.saleType as Sale['saleType'],
+      quantity: originalSaleData.quantity,
+    });
 
     toast({ title: "Sale Updated", description: "The sale record has been updated." });
     setEditSaleOpen(false);
@@ -178,10 +173,7 @@ export default function SalesPage() {
   function handleDeleteSale(sale: Sale) {
     if (!user || !flocks) return;
     
-    // Add back the sold items to inventory
-    updateFlockInventory(firestore, user.uid, sale.flockId, sale.quantity, sale.saleType);
-
-    deleteSale(firestore, user.uid, sale.id);
+    deleteSaleWithInventory(firestore, user.uid, sale);
     toast({
       title: "Sale Deleted",
       description: `The sale has been deleted and items have been returned to inventory.`,
