@@ -6,12 +6,7 @@
     "dev": "next dev --webpack",
     "genkit:dev": "genkit start",
     "genkit:watch": "genkit start --watch",
-<<<<<<< HEAD
-    "build": "NODE_ENV=production next build --webpack",
-=======
-    "build": "next build --webpack",
->>>>>>> 6adaac7 (fix: update CluckTrack PWA for Next.js 16)
-    "start": "next start",
+    "build": "next build --webpack",    "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
@@ -61,3 +56,4 @@
     "typescript": "^5"
   }
 }
+
