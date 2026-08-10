@@ -2,6 +2,15 @@
 
 'use client';
 
+import {
+  collection,
+  doc,
+  Timestamp,
+  Firestore,
+  WhereFilterOp,
+  where,
+} from 'firebase/firestore';
+
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -48,7 +57,6 @@ import { PlusCircle, Calendar as CalendarIcon, Loader2, Trash2, Pencil, ScanLine
 import type { Expenditure, Flock } from '@/lib/types';
 import { expenditureSchema } from '@/lib/types';
 import { useFirebase, useCollection } from '@/firebase';
-import { collection } from 'firebase/firestore';
 import { z } from 'zod';
 import { scanReceipt } from '@/ai/flows/scan-receipt';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
