@@ -48,7 +48,12 @@ import { PlusCircle, Calendar as CalendarIcon, Loader2, Trash2, Pencil } from 'l
 import type { Sale, Flock } from '@/lib/types';
 import { saleSchema } from '@/lib/types';
 import { useFirebase, useCollection } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import {
+  collection,
+  query,
+  orderBy,
+  limit,
+} from 'firebase/firestore';
 import { z } from 'zod';
 import { useCurrency } from '@/hooks/use-currency';
 import {
@@ -70,9 +75,19 @@ export default function SalesPage() {
   const { formatCurrency, currencySymbol } = useCurrency();
 
   const salesRef = useMemo(() => {
-    if (!user) return null;
-    return collection(firestore, 'users', user.uid, 'sales');
-  }, [firestore, user]);
+  if (!user) return null;
+
+  return query(
+    collection(
+      firestore,
+      'users',
+      user.uid,
+      'sales',
+    ),
+    orderBy('saleDate', 'desc'),
+    limit(50),
+  );
+}, [firestore, user]);
   const { data: sales, isLoading: isLoadingSales } = useCollection<Sale>(salesRef);
 
   const flocksRef = useMemo(() => {
