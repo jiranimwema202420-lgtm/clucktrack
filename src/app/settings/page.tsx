@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useTheme } from 'next-themes';
+import { useTheme } from '@/components/theme-provider';
 import { Moon, Sun, DollarSign } from 'lucide-react';
 import { useFirebase, useDoc } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
