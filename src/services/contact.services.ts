@@ -1,19 +1,41 @@
-import { collection, doc, Firestore } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/firestore/non-blocking-writes';
-import { z } from 'zod';
-import { contactSchema } from '@/lib/types';
+import { collection, doc, Firestore } from "firebase/firestore";
+import {
+  addDocumentNonBlocking,
+  updateDocumentNonBlocking,
+  deleteDocumentNonBlocking,
+} from "@/firebase/firestore/non-blocking-writes";
+import { z } from "zod";
+import { contactSchema } from "@/lib/types";
 
-export function addContact(firestore: Firestore, userId: string, data: z.infer<typeof contactSchema>) {
-    const contactsRef = collection(firestore, 'users', userId, 'contacts');
-    addDocumentNonBlocking(contactsRef, data);
+export type ContactFormData = z.infer<typeof contactSchema>;
+
+export function addContact(
+  firestore: Firestore,
+  userId: string,
+  data: ContactFormData,
+) {
+  const contactsRef = collection(firestore, "users", userId, "contacts");
+
+  return addDocumentNonBlocking(contactsRef, data);
 }
 
-export function updateContact(firestore: Firestore, userId: string, contactId: string, data: z.infer<typeof contactSchema>) {
-    const contactDocRef = doc(firestore, 'users', userId, 'contacts', contactId);
-    updateDocumentNonBlocking(contactDocRef, data);
+export function updateContact(
+  firestore: Firestore,
+  userId: string,
+  contactId: string,
+  data: ContactFormData,
+) {
+  const contactDocRef = doc(firestore, "users", userId, "contacts", contactId);
+
+  return updateDocumentNonBlocking(contactDocRef, data);
 }
 
-export function deleteContact(firestore: Firestore, userId: string, contactId: string) {
-    const contactDocRef = doc(firestore, 'users', userId, 'contacts', contactId);
-    deleteDocumentNonBlocking(contactDocRef);
+export function deleteContact(
+  firestore: Firestore,
+  userId: string,
+  contactId: string,
+) {
+  const contactDocRef = doc(firestore, "users", userId, "contacts", contactId);
+
+  return deleteDocumentNonBlocking(contactDocRef);
 }
