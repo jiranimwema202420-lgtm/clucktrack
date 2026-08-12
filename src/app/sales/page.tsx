@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -48,11 +46,11 @@ import { PlusCircle, Calendar as CalendarIcon, Loader2, Trash2, Pencil } from 'l
 import type { Sale, Flock } from '@/lib/types';
 import { saleSchema } from '@/lib/types';
 import { useFirebase, useCollection } from '@/firebase';
+import { usePaginatedCollection } from '@/firebase/firestore/use-paginated-collection';
 import {
   collection,
   query,
   orderBy,
-  limit,
 } from 'firebase/firestore';
 import { z } from 'zod';
 import { useCurrency } from '@/hooks/use-currency';
@@ -75,25 +73,32 @@ export default function SalesPage() {
   const { formatCurrency, currencySymbol } = useCurrency();
 
   const salesRef = useMemo(() => {
-  if (!user) return null;
+    if (!user) return null;
 
-  return query(
-    collection(
-      firestore,
-      'users',
-      user.uid,
-      'sales',
-    ),
-    orderBy('saleDate', 'desc'),
-    limit(50),
-  );
-}, [firestore, user]);
-  const { data: sales, isLoading: isLoadingSales } = useCollection<Sale>(salesRef);
+    return query(
+      collection(
+        firestore,
+        'users',
+        user.uid,
+        'sales',
+      ),
+      orderBy('saleDate', 'desc'),
+    );
+  }, [firestore, user]);
+
+  const {
+    data: sales,
+    isLoading: isLoadingSales,
+    isLoadingMore: isLoadingMoreSales,
+    hasMore: hasMoreSales,
+    loadMore: loadMoreSales,
+  } = usePaginatedCollection<Sale>(salesRef);
 
   const flocksRef = useMemo(() => {
     if (!user) return null;
     return collection(firestore, 'users', user.uid, 'flocks');
   }, [firestore, user]);
+
   const { data: flocks, isLoading: isLoadingFlocks } = useCollection<Flock>(flocksRef);
 
 
@@ -144,6 +149,7 @@ export default function SalesPage() {
         toast({ variant: "destructive", title: "Not enough birds", description: `You only have ${flockToUpdate.count} birds in this flock.` });
         return;
     }
+    
     if (values.saleType === 'Eggs' && values.quantity > (flockToUpdate.totalEggsCollected || 0)) {
         toast({ variant: "destructive", title: "Not enough eggs", description: `You only have ${flockToUpdate.totalEggsCollected || 0} eggs recorded for this flock.`});
         return;
@@ -196,7 +202,7 @@ export default function SalesPage() {
     }
     toast({
       title: "Sale Deleted",
-      description: `The sale has been deleted and items have been returned to inventory.`,
+      description: `The sale has been deleted and items have been returned to the flock inventory.`,
       variant: "destructive"
     });
   }
@@ -237,6 +243,7 @@ export default function SalesPage() {
             </FormItem>
             )}
         />
+
         {selectedFlockForForm?.type === 'Layer' && (
              <FormField
                 control={form.control}
@@ -260,6 +267,7 @@ export default function SalesPage() {
                 )}
             />
         )}
+
         <div className="grid grid-cols-2 gap-4">
             <FormField
                 control={form.control}
@@ -274,6 +282,7 @@ export default function SalesPage() {
                 </FormItem>
                 )}
             />
+
             <FormField
                 control={form.control}
                 name="pricePerUnit"
@@ -428,14 +437,14 @@ export default function SalesPage() {
                     </TableCell>
                   </TableRow>
                 )}
-                {!isLoadingSales && sales?.length === 0 && (
+                {!isLoadingSales && sales.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center">
                       No sales recorded yet.
                     </TableCell>
                   </TableRow>
                 )}
-                {sales?.map((sale) => (
+                {sales.map((sale) => (
                   <TableRow key={sale.id}>
                     <TableCell>{format(sale.saleDate.toDate(), 'yyyy-MM-dd')}</TableCell>
                     <TableCell>{flocks?.find(f => f.id === sale.flockId)?.breed || sale.flockId.substring(0,6)}</TableCell>
@@ -473,6 +482,34 @@ export default function SalesPage() {
                 ))}
               </TableBody>
             </Table>
+
+            {hasMoreSales && (
+              <div className="flex justify-center pt-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={loadMoreSales}
+                  disabled={isLoadingMoreSales}
+                >
+                  {isLoadingMoreSales ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading more...
+                    </>
+                  ) : (
+                    'Load More'
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {!isLoadingSales &&
+              !hasMoreSales &&
+              sales.length > 0 && (
+                <p className="pt-6 text-center text-sm text-muted-foreground">
+                  No more sales to load.
+                </p>
+              )}
           </CardContent>
         </Card>
       </div>
