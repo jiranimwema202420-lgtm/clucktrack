@@ -712,14 +712,14 @@ export default function ExpenditurePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoadingExpenditures && (
+                {isLoading && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center">
                       <Loader2 className="mx-auto h-8 w-8 animate-spin" />
                     </TableCell>
                   </TableRow>
                 )}
-                 {!isLoadingExpenditures && expenditures?.length === 0 && (
+                 {!isLoading && expenditures?.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center">
                       No expenditures recorded yet.
@@ -770,4 +770,5 @@ export default function ExpenditurePage() {
     </div>
   );
 }
+
 
