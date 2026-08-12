@@ -1,4 +1,4 @@
-
+﻿
 
 'use client';
 
@@ -9,6 +9,8 @@ import {
   Firestore,
   WhereFilterOp,
   where,
+  query,
+  orderBy,
 } from 'firebase/firestore';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -57,6 +59,7 @@ import { PlusCircle, Calendar as CalendarIcon, Loader2, Trash2, Pencil, ScanLine
 import type { Expenditure, Flock } from '@/lib/types';
 import { expenditureSchema } from '@/lib/types';
 import { useFirebase, useCollection } from '@/firebase';
+import { usePaginatedCollection } from '@/firebase/firestore/use-paginated-collection';
 import { z } from 'zod';
 import { scanReceipt } from '@/ai/flows/scan-receipt';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
@@ -767,3 +770,5 @@ export default function ExpenditurePage() {
     </div>
   );
 }
+
+
