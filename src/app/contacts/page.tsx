@@ -40,8 +40,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Loader2, Trash2, Pencil } from 'lucide-react';
-import { useFirebase, useCollection } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useFirebase } from '@/firebase';
+import { usePaginatedCollection } from '@/firebase/firestore/use-paginated-collection';
+import {
+  collection,
+  orderBy,
+  query,
+} from 'firebase/firestore';
 import type { Contact } from '@/lib/types';
 import { contactSchema } from '@/lib/types';
 import { addContact, updateContact, deleteContact } from '@/services/contact.services';
@@ -59,10 +64,25 @@ export default function ContactsPage() {
 
   const contactsRef = useMemo(() => {
     if (!user) return null;
-    return collection(firestore, 'users', user.uid, 'contacts');
+
+    return query(
+      collection(
+        firestore,
+        'users',
+        user.uid,
+        'contacts',
+      ),
+      orderBy('name', 'asc'),
+    );
   }, [firestore, user]);
 
-  const { data: contacts, isLoading } = useCollection<Contact>(contactsRef);
+  const {
+    data: contacts,
+    isLoading,
+    isLoadingMore: isLoadingMoreContacts,
+    hasMore: hasMoreContacts,
+    loadMore: loadMoreContacts,
+  } = usePaginatedCollection<Contact>(contactsRef);
 
   const form = useForm<z.infer<typeof contactSchema>>({
     resolver: zodResolver(contactSchema),
