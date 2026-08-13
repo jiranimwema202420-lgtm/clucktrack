@@ -13,8 +13,10 @@ import { StatsCard } from '@/components/dashboard/stats-card';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Line, ComposedChart } from 'recharts';
 import { DollarSign, TrendingUp, TrendingDown, ChevronsUpDown, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useFirebase, useCollection } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useFirebase } from '@/firebase';
+import { usePaginatedCollection } from '@/firebase/firestore/use-paginated-collection';
+import { Button } from '@/components/ui/button';
+import { collection, orderBy, query } from 'firebase/firestore';
 import type { Sale, Expenditure } from '@/lib/types';
 import { useCurrency } from '@/hooks/use-currency';
 
@@ -26,15 +28,35 @@ export default function FinancialsPage() {
 
   const salesRef = useMemo(() => {
     if (!user) return null;
-    return collection(firestore, 'users', user.uid, 'sales');
+    return query(
+      collection(firestore, 'users', user.uid, 'sales'),
+      orderBy('saleDate', 'desc'),
+    );
   }, [firestore, user]);
-  const { data: sales, isLoading: isLoadingSales } = useCollection<Sale>(salesRef);
+
+  const {
+    data: sales,
+    isLoading: isLoadingSales,
+    isLoadingMore: isLoadingMoreSales,
+    hasMore: hasMoreSales,
+    loadMore: loadMoreSales,
+  } = usePaginatedCollection<Sale>(salesRef);
 
   const expendituresRef = useMemo(() => {
     if (!user) return null;
-    return collection(firestore, 'users', user.uid, 'expenditures');
+    return query(
+      collection(firestore, 'users', user.uid, 'expenditures'),
+      orderBy('expenditureDate', 'desc'),
+    );
   }, [firestore, user]);
-  const { data: expenditures, isLoading: isLoadingExpenditures } = useCollection<Expenditure>(expendituresRef);
+
+  const {
+    data: expenditures,
+    isLoading: isLoadingExpenditures,
+    isLoadingMore: isLoadingMoreExpenditures,
+    hasMore: hasMoreExpenditures,
+    loadMore: loadMoreExpenditures,
+  } = usePaginatedCollection<Expenditure>(expendituresRef);
   
   const totalRevenue = sales?.reduce((sum, sale) => sum + sale.total, 0) || 0;
   const totalExpenditure = expenditures?.reduce((sum, expense) => sum + expense.amount, 0) || 0;
@@ -131,6 +153,39 @@ export default function FinancialsPage() {
             </ResponsiveContainer>
         </CardContent>
       </Card>
+
+      {(hasMoreSales || hasMoreExpenditures) && (
+        <div className="flex justify-center">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={async () => {
+              await Promise.all([
+                hasMoreSales
+                  ? loadMoreSales()
+                  : Promise.resolve(),
+                hasMoreExpenditures
+                  ? loadMoreExpenditures()
+                  : Promise.resolve(),
+              ]);
+            }}
+            disabled={
+              isLoadingMoreSales ||
+              isLoadingMoreExpenditures
+            }
+          >
+            {isLoadingMoreSales ||
+            isLoadingMoreExpenditures ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Loading more...
+              </>
+            ) : (
+              'Load More Financial Data'
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
