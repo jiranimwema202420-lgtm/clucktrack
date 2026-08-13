@@ -23,8 +23,11 @@ import {
     SelectTrigger,
     SelectValue,
   } from '@/components/ui/select';
-import { useFirebase, useCollection } from '@/firebase';
-import { collection } from 'firebase/firestore';
+
+import { useFirebase } from '@/firebase';
+import { Button } from '@/components/ui/button';
+import { usePaginatedCollection } from '@/firebase/firestore/use-paginated-collection';
+import { collection, orderBy, query } from 'firebase/firestore';
 import type { Flock } from '@/lib/types';
 import { BarChart, Bar, XAxis, YAxis, LineChart, Line, CartesianGrid, Tooltip, TooltipProps } from 'recharts';
 import { TrendingDown, Scale, Utensils, Loader2 } from 'lucide-react';
@@ -84,11 +87,21 @@ export default function ReportsPage() {
     const { firestore, user } = useFirebase();
     const [selectedFlockId, setSelectedFlockId] = useState('all');
 
-    const flocksRef = useMemo(() => {
+        const flocksRef = useMemo(() => {
         if (!user) return null;
-        return collection(firestore, 'users', user.uid, 'flocks');
+        return query(
+          collection(firestore, 'users', user.uid, 'flocks'),
+          orderBy('createdAt', 'desc'),
+        );
       }, [firestore, user]);
-    const { data: flocks, isLoading } = useCollection<Flock>(flocksRef);
+
+    const {
+      data: flocks,
+      isLoading,
+      isLoadingMore,
+      hasMore,
+      loadMore,
+    } = usePaginatedCollection<Flock>(flocksRef);
     
     if (isLoading) {
         return (
@@ -255,9 +268,28 @@ export default function ReportsPage() {
                     </LineChart>
                 </ChartContainer>
             </CardContent>
-        </Card>
+      </Card>
+
+      {hasMore && (
+        <div className="flex justify-center">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={loadMore}
+            disabled={isLoadingMore}
+          >
+            {isLoadingMore ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Loading more...
+              </>
+            ) : (
+              'Load More Flocks'
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
-
     
