@@ -2,6 +2,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Card,
   CardContent,
@@ -10,13 +11,22 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { StatsCard } from '@/components/dashboard/stats-card';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Line, ComposedChart } from 'recharts';
 import { DollarSign, TrendingUp, TrendingDown, ChevronsUpDown, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useFirebase, useCollection } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Sale, Expenditure } from '@/lib/types';
 import { useCurrency } from '@/hooks/use-currency';
+
+// Lazy load Recharts components for better bundle splitting
+const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
+const ComposedChart = dynamic(() => import('recharts').then(mod => mod.ComposedChart), { ssr: false });
+const Bar = dynamic(() => import('recharts').then(mod => mod.Bar), { ssr: false });
+const Line = dynamic(() => import('recharts').then(mod => mod.Line), { ssr: false });
+const XAxis = dynamic(() => import('recharts').then(mod => mod.XAxis), { ssr: false });
+const YAxis = dynamic(() => import('recharts').then(mod => mod.YAxis), { ssr: false });
+const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr: false });
+const Legend = dynamic(() => import('recharts').then(mod => mod.Legend), { ssr: false });
 
 export const dynamic = 'force-dynamic';
 

@@ -2,12 +2,14 @@
 
 import type { ReactNode } from 'react';
 import { redirect, usePathname } from 'next/navigation';
+import dynamic from 'next/dynamic';
 
 import './globals.css';
 
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider, useFirebase } from '@/firebase';
 import { ThemeProvider } from '@/components/theme-provider';
+import { LanguageProvider } from '@/lib/i18n';
 import {
   Sidebar,
   SidebarInset,
@@ -17,6 +19,9 @@ import Header from '@/components/header';
 import Nav from '@/components/nav';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+// Lazy load heavy components for better initial page load
+const DynamicRecharts = dynamic(() => import('recharts'), { ssr: false });
 
 const publicRoutes = ['/login'];
 
@@ -84,6 +89,7 @@ export default function RootLayout({
 
         <link rel="manifest" href="/manifest.json" />
 
+        {/* Preconnect to external resources */}
         <link
           rel="preconnect"
           href="https://fonts.googleapis.com"
@@ -93,6 +99,16 @@ export default function RootLayout({
           rel="preconnect"
           href="https://fonts.gstatic.com"
           crossOrigin="anonymous"
+        />
+
+        <link
+          rel="dns-prefetch"
+          href="https://images.unsplash.com"
+        />
+
+        <link
+          rel="dns-prefetch"
+          href="https://picsum.photos"
         />
 
         <link
@@ -116,7 +132,9 @@ export default function RootLayout({
             defaultTheme="system"
             enableSystem
           >
-            <AppLayout>{children}</AppLayout>
+            <LanguageProvider>
+              <AppLayout>{children}</AppLayout>
+            </LanguageProvider>
           </ThemeProvider>
         </FirebaseClientProvider>
 

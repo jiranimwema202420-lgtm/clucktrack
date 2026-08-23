@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Card,
   CardContent,
@@ -15,13 +16,19 @@ import { Slider } from '@/components/ui/slider';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { Wheat, Users, BrainCircuit, ArrowRight, Loader2, Scale, Egg } from 'lucide-react';
 import Link from 'next/link';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { useFirebase, useCollection } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import type { Flock, SensorData } from '@/lib/types';
 import { HeartPulse } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { addSensorData } from '@/services/sensor.services';
+
+// Lazy load Recharts components for better bundle splitting
+const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
+const BarChart = dynamic(() => import('recharts').then(mod => mod.BarChart), { ssr: false });
+const Bar = dynamic(() => import('recharts').then(mod => mod.Bar), { ssr: false });
+const XAxis = dynamic(() => import('recharts').then(mod => mod.XAxis), { ssr: false });
+const YAxis = dynamic(() => import('recharts').then(mod => mod.YAxis), { ssr: false });
 
 export const dynamic = 'force-dynamic';
 
@@ -115,7 +122,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 animate-in fade-in duration-500">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
             title="Avg. Weight (Broilers)"
@@ -147,9 +154,12 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <Card>
+          <Card className="glass-card gradient-primary">
             <CardHeader>
-              <CardTitle>Flock Growth Projection</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <span className="text-2xl">📈</span>
+                Flock Growth Projection
+              </CardTitle>
               <CardDescription>Average weight gain for a typical broiler flock.</CardDescription>
             </CardHeader>
             <CardContent className="h-80">
@@ -169,7 +179,7 @@ export default function DashboardPage() {
                         axisLine={false}
                         tickFormatter={(value) => `${value} kg`}
                         />
-                        <Bar dataKey="weight" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="weight" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} className="transition-all duration-300 hover:opacity-80" />
                     </BarChart>
                 </ResponsiveContainer>
             </CardContent>
@@ -177,9 +187,12 @@ export default function DashboardPage() {
         </div>
 
         <div>
-            <Card className="h-full flex flex-col">
+            <Card className="glass-card gradient-accent h-full flex flex-col">
                 <CardHeader>
-                    <CardTitle>Environmental Control</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <span className="text-2xl">🌡️</span>
+                      Environmental Control
+                    </CardTitle>
                     <CardDescription>Remotely adjust farm conditions.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow space-y-8">
@@ -188,34 +201,36 @@ export default function DashboardPage() {
                             <label className="text-sm font-medium">Temperature</label>
                             <span className="font-bold text-lg text-primary">{temperature}°C</span>
                         </div>
-                        <Slider value={[temperature]} onValueChange={(vals) => setTemperature(vals[0])} max={40} step={1} />
+                        <Slider value={[temperature]} onValueChange={(vals) => setTemperature(vals[0])} max={40} step={1} className="cursor-pointer" />
                     </div>
                      <div className="space-y-3">
                         <div className="flex justify-between items-baseline">
                             <label className="text-sm font-medium">Humidity</label>
                             <span className="font-bold text-lg text-primary">{humidity}%</span>
                         </div>
-                        <Slider value={[humidity]} onValueChange={(vals) => setHumidity(vals[0])} max={100} step={1} />
+                        <Slider value={[humidity]} onValueChange={(vals) => setHumidity(vals[0])} max={100} step={1} className="cursor-pointer" />
                     </div>
                      <div className="space-y-3">
                         <div className="flex justify-between items-baseline">
                             <label className="text-sm font-medium">Ventilation (Ammonia)</label>
                             <span className="font-bold text-lg text-primary">{ammoniaLevel} ppm</span>
                         </div>
-                        <Slider value={[ammoniaLevel]} onValueChange={(vals) => setAmmoniaLevel(vals[0])} max={50} step={1} />
+                        <Slider value={[ammoniaLevel]} onValueChange={(vals) => setAmmoniaLevel(vals[0])} max={50} step={1} className="cursor-pointer" />
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <Button className="w-full" onClick={handleApplyChanges}>Apply Changes</Button>
+                    <Button className="w-full btn-glow" onClick={handleApplyChanges}>
+                      <span className="mr-2">✨</span> Apply Changes
+                    </Button>
                 </CardFooter>
             </Card>
         </div>
       </div>
        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-            <Card className="hover:shadow-md transition-shadow">
+            <Card className="glass-card hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <BrainCircuit className="text-primary"/>
+                        <BrainCircuit className="text-primary animate-pulse-slow"/>
                         AI Feed Optimizer
                     </CardTitle>
                     <CardDescription>
@@ -224,17 +239,17 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardFooter>
                     <Link href="/feed-optimization" className="w-full">
-                        <Button variant="outline" className="w-full">
+                        <Button variant="outline" className="w-full btn-glow">
                             Optimize Feed Mix
                             <ArrowRight className="ml-2 h-4 w-4"/>
                         </Button>
                     </Link>
                 </CardFooter>
             </Card>
-            <Card className="hover:shadow-md transition-shadow">
+            <Card className="glass-card hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <HeartPulse className="text-primary"/>
+                        <HeartPulse className="text-primary animate-pulse-slow"/>
                         AI Health Predictor
                     </CardTitle>
                     <CardDescription>
@@ -243,7 +258,7 @@ export default function DashboardPage() {
                 </CardHeader>
                  <CardFooter>
                     <Link href="/health-prediction" className="w-full">
-                         <Button variant="outline" className="w-full">
+                         <Button variant="outline" className="w-full btn-glow">
                             Predict Health Issues
                             <ArrowRight className="ml-2 h-4 w-4"/>
                         </Button>

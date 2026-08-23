@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Card,
   CardContent,
@@ -26,10 +27,19 @@ import {
 import { useFirebase, useCollection } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Flock } from '@/lib/types';
-import { BarChart, Bar, XAxis, YAxis, LineChart, Line, CartesianGrid, Tooltip, TooltipProps } from 'recharts';
 import { TrendingDown, Scale, Utensils, Loader2 } from 'lucide-react';
-import { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
 import { format, differenceInWeeks, addWeeks } from 'date-fns';
+import type { TooltipProps, NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
+
+// Lazy load Recharts components for better bundle splitting
+const BarChart = dynamic(() => import('recharts').then(mod => mod.BarChart), { ssr: false });
+const Bar = dynamic(() => import('recharts').then(mod => mod.Bar), { ssr: false });
+const XAxis = dynamic(() => import('recharts').then(mod => mod.XAxis), { ssr: false });
+const YAxis = dynamic(() => import('recharts').then(mod => mod.YAxis), { ssr: false });
+const LineChart = dynamic(() => import('recharts').then(mod => mod.LineChart), { ssr: false });
+const Line = dynamic(() => import('recharts').then(mod => mod.Line), { ssr: false });
+const CartesianGrid = dynamic(() => import('recharts').then(mod => mod.CartesianGrid), { ssr: false });
+const Tooltip = dynamic(() => import('recharts').then(mod => mod.Tooltip), { ssr: false });
 
 export const dynamic = 'force-dynamic';
 

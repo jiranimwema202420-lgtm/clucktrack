@@ -14,12 +14,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ChevronsUpDown, LogIn, LogOut, Settings, ArrowLeft, ArrowRight } from 'lucide-react';
+import { ChevronsUpDown, LogIn, LogOut, Settings, ArrowLeft, ArrowRight, Globe } from 'lucide-react';
 import { useFirebase, useDoc } from '@/firebase';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
+import { LanguageSelector } from '@/components/language-selector';
 
 
 const pathToTitle: { [key: string]: string } = {
@@ -75,7 +76,9 @@ export default function Header() {
 
       <h1 className="text-xl font-semibold">{pageTitle}</h1>
       
-      <div className="ml-auto">
+      <div className="ml-auto flex items-center gap-2">
+        <LanguageSelector />
+        
         { user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
