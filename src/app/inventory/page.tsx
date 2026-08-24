@@ -67,7 +67,8 @@ import { useToast } from '@/hooks/use-toast';
 import type { Flock } from '@/lib/types';
 import { flockSchema } from '@/lib/types';
 import { useFirebase, useCollection } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { usePaginatedCollection } from '@/firebase/firestore/use-paginated-collection';
+import { collection, orderBy, query } from 'firebase/firestore';
 import { z } from 'zod';
 import { useCurrency } from '@/hooks/use-currency';
 import { updateFlock, deleteFlock, MortalityInventoryError, recordMortality } from '@/services/flock.services';
@@ -97,10 +98,20 @@ export default function InventoryPage() {
 
   const flocksRef = useMemo(() => {
     if (!user) return null;
-    return collection(firestore, 'users', user.uid, 'flocks');
+
+    return query(
+      collection(firestore, 'users', user.uid, 'flocks'),
+      orderBy('createdAt', 'desc'),
+    );
   }, [firestore, user]);
 
-  const { data: flocks, isLoading } = useCollection<Flock>(flocksRef);
+  const {
+    data: flocks,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    loadMore,
+  } = usePaginatedCollection<Flock>(flocksRef);
   const layerFlocks = flocks?.filter(f => f.type === 'Layer');
 
   const form = useForm<z.infer<typeof flockSchema>>({
@@ -720,6 +731,26 @@ export default function InventoryPage() {
           </TableBody>
         </Table>
       </CardContent>
+
+      {hasMore && (
+        <div className="flex justify-center pt-4 pb-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={loadMore}
+            disabled={isLoadingMore}
+          >
+            {isLoadingMore ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Loading more...
+              </>
+            ) : (
+              'Load More Flocks'
+            )}
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }
