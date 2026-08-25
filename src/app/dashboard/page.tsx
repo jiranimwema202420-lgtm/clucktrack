@@ -1,4 +1,4 @@
-
+﻿
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -210,47 +210,9 @@ export default function DashboardPage() {
                 </CardFooter>
             </Card>
         </div>
-      </div>
-       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-            <Card className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <BrainCircuit className="text-primary"/>
-                        AI Feed Optimizer
-                    </CardTitle>
-                    <CardDescription>
-                        Analyze consumption patterns and nutrient requirements to get the optimal feed mix for growth and cost-efficiency.
-                    </CardDescription>
-                </CardHeader>
-                <CardFooter>
-                    <Link href="/feed-optimization" className="w-full">
-                        <Button variant="outline" className="w-full">
-                            Optimize Feed Mix
-                            <ArrowRight className="ml-2 h-4 w-4"/>
-                        </Button>
-                    </Link>
-                </CardFooter>
-            </Card>
-            <Card className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <HeartPulse className="text-primary"/>
-                        AI Health Predictor
-                    </CardTitle>
-                    <CardDescription>
-                        Use historical and real-time data to forecast potential health issues and receive proactive alerts.
-                    </CardDescription>
-                </CardHeader>
-                 <CardFooter>
-                    <Link href="/health-prediction" className="w-full">
-                         <Button variant="outline" className="w-full">
-                            Predict Health Issues
-                            <ArrowRight className="ml-2 h-4 w-4"/>
-                        </Button>
-                    </Link>
-                </CardFooter>
-            </Card>
-       </div>
-    </div>
+      </div></div>
   );
 }
+
+
+

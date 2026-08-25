@@ -61,7 +61,6 @@ import { expenditureSchema } from '@/lib/types';
 import { useFirebase, useCollection } from '@/firebase';
 import { usePaginatedCollection } from '@/firebase/firestore/use-paginated-collection';
 import { z } from 'zod';
-import { scanReceipt } from '@/ai/flows/scan-receipt';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Papa from 'papaparse';
 import { useCurrency } from '@/hooks/use-currency';
@@ -79,11 +78,6 @@ export default function ExpenditurePage() {
   const [isAddExpenseOpen, setAddExpenseOpen] = useState(false);
   const [isEditExpenseOpen, setEditExpenseOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<Expenditure | null>(null);
-  const [isScannerOpen, setScannerOpen] = useState(false);
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isImportModalOpen, setImportModalOpen] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedExpenditure[]>([]);
   const [parseErrors, setParseErrors] = useState<string[]>([]);
@@ -131,84 +125,7 @@ export default function ExpenditurePage() {
     setCalculatedAmount(amount);
     form.setValue('amount', amount, { shouldValidate: true });
   }, [watchQuantity, watchUnitPrice, form]);
-  
-  useEffect(() => {
-    if (isScannerOpen) {
-      const getCameraPermission = async () => {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-          setHasCameraPermission(true);
-  
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-          }
-        } catch (error) {
-          console.error('Error accessing camera:', error);
-          setHasCameraPermission(false);
-          toast({
-            variant: 'destructive',
-            title: 'Camera Access Denied',
-            description: 'Please enable camera permissions in your browser settings.',
-          });
-        }
-      };
-  
-      getCameraPermission();
-  
-      return () => {
-        if (videoRef.current && videoRef.current.srcObject) {
-          const stream = videoRef.current.srcObject as MediaStream;
-          stream.getTracks().forEach(track => track.stop());
-        }
-      };
-    }
-  }, [isScannerOpen, toast]);
-
-  const handleCaptureAndScan = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
-    setIsScanning(true);
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const context = canvas.getContext('2d');
-    context?.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-
-    const imageDataUri = canvas.toDataURL('image/jpeg');
-
-    try {
-      const result = await scanReceipt({ receiptImage: imageDataUri });
-      toast({
-        title: 'Scan Successful',
-        description: 'Receipt data has been extracted.',
-      });
-
-      const scannedCategory = result.category.toLowerCase();
-      const matchedCategory = expenditureCategories.find(c => c.toLowerCase().includes(scannedCategory) || scannedCategory.includes(c.toLowerCase())) || 'Other';
-      
-      form.setValue('category', matchedCategory);
-      form.setValue('quantity', result.quantity > 0 ? result.quantity : 1);
-      form.setValue('unitPrice', result.unitPrice > 0 ? result.unitPrice : result.amount);
-      form.setValue('amount', result.amount);
-      form.setValue('description', result.description);
-      form.setValue('expenditureDate', result.expenditureDate ? new Date(result.expenditureDate) : new Date());
-
-      setScannerOpen(false);
-      setAddExpenseOpen(true);
-    } catch (error) {
-      console.error('Error scanning receipt:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Scan Failed',
-        description: 'Could not extract data from the receipt. Please try again or enter manually.',
-      });
-    } finally {
-      setIsScanning(false);
-    }
-  };
-
-  function onSubmit(values: z.infer<typeof expenditureSchema>) {
+function onSubmit(values: z.infer<typeof expenditureSchema>) {
     if (!user || !flocksRef) return;
 
     const amount = values.quantity * values.unitPrice;
@@ -522,10 +439,6 @@ export default function ExpenditurePage() {
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Record New Expense
             </Button>
-             <Button variant="outline" className="w-full" onClick={() => setScannerOpen(true)}>
-                <ScanLine className="mr-2 h-4 w-4" />
-                Scan Receipt
-            </Button>
             <Button variant="outline" className="w-full" onClick={() => setImportModalOpen(true)}>
                 <Upload className="mr-2 h-4 w-4" />
                 Import CSV
@@ -551,59 +464,7 @@ export default function ExpenditurePage() {
                 </Form>
             </DialogContent>
        </Dialog>
-        
-       <Dialog open={isScannerOpen} onOpenChange={setScannerOpen}>
-        <DialogContent className="max-w-md w-full">
-          <DialogHeader>
-            <DialogTitle>Scan Receipt</DialogTitle>
-            <DialogDescription>
-              Position your receipt in the frame and click capture.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="relative">
-            <video
-              ref={videoRef}
-              className={cn('w-full aspect-video rounded-md bg-muted', {
-                'hidden': hasCameraPermission === false,
-              })}
-              autoPlay
-              muted
-            />
-            <canvas ref={canvasRef} className="hidden" />
-            {hasCameraPermission === false && (
-              <Alert variant="destructive" className="w-full aspect-video flex flex-col justify-center items-center">
-                <AlertTitle>Camera Access Required</AlertTitle>
-                <AlertDescription>
-                  Please allow camera access in your browser to use this feature.
-                </AlertDescription>
-              </Alert>
-            )}
-            {isScanning && (
-              <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center rounded-md">
-                <Loader2 className="h-16 w-16 animate-spin text-primary" />
-                <p className="text-white mt-4">Analyzing receipt...</p>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="secondary"
-              onClick={() => setScannerOpen(false)}
-              disabled={isScanning}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCaptureAndScan}
-              disabled={isScanning || hasCameraPermission !== true}
-            >
-              {isScanning ? 'Scanning...' : <><Camera className="mr-2 h-4 w-4" /> Capture & Scan</>}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-       </Dialog>
-
-       <Dialog open={isImportModalOpen} onOpenChange={setImportModalOpen}>
+<Dialog open={isImportModalOpen} onOpenChange={setImportModalOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Import Expenditures from CSV</DialogTitle>
@@ -770,5 +631,6 @@ export default function ExpenditurePage() {
     </div>
   );
 }
+
 
 
