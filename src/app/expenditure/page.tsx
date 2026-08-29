@@ -89,10 +89,20 @@ export default function ExpenditurePage() {
 
   const expendituresRef = useMemo(() => {
     if (!user) return null;
-    return collection(firestore, 'users', user.uid, 'expenditures');
+
+    return query(
+      collection(firestore, 'users', user.uid, 'expenditures'),
+      orderBy('expenditureDate', 'desc'),
+    );
   }, [firestore, user]);
 
-  const { data: expenditures, isLoading } = useCollection<Expenditure>(expendituresRef);
+  const {
+    data: expenditures,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    loadMore,
+  } = usePaginatedCollection<Expenditure>(expendituresRef);
   
   const flocksRef = useMemo(() => {
     if (!user) return null;
@@ -627,6 +637,26 @@ function onSubmit(values: z.infer<typeof expenditureSchema>) {
             </Table>
           </CardContent>
         </Card>
+
+        {hasMore && (
+          <div className="flex justify-center pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={loadMore}
+              disabled={isLoadingMore}
+            >
+              {isLoadingMore ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Loading more...
+                </>
+              ) : (
+                'Load More Expenditures'
+              )}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
